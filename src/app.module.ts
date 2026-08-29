@@ -22,6 +22,7 @@ import { UsersModule } from './modules/users/users.module';
 import { ShipmentsModule } from './modules/shipments/shipments.module';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { HealthModule } from './modules/health/health.module';
 import { DatabaseSeederService } from './common/services/seeder.service';
 
 const logger = new Logger('DatabaseConfig');
@@ -171,6 +172,7 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
     ShipmentsModule,
     WalletModule,
     NotificationsModule,
+    HealthModule,
   ],
   providers: [DatabaseSeederService],
 })

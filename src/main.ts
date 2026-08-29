@@ -59,6 +59,7 @@ Comprehensive logistics platform rewritten in NestJS & TypeORM.
     .addTag('Admin Operations & Webhooks', 'Admin shipment oversight and OTO webhooks')
     .addTag('Admin Bank Transfers & Financials', 'Bank transfer approvals')
     .addTag('Notifications & FCM Push', 'Notifications and device tokens')
+    .addTag('System & Health', 'Health checks and database connectivity monitoring')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
