@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Shipment } from './entities/shipment.entity';
 import { OtoWebhookLog } from './entities/oto-webhook-log.entity';
 import { ShipmentStatus, PaymentMethod } from './enums/shipment.enum';
@@ -20,6 +21,11 @@ import { PaginationParamsDto, PagedResult } from '../../common/dtos/pagination.d
 import { WalletService } from '../wallet/wallet.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/enums/notification.enum';
+import {
+  DomainEventNames,
+  ShipmentCreatedEvent,
+  ShipmentStatusChangedEvent,
+} from '../../common/events/domain-events';
 
 @Injectable()
 export class ShipmentsService {
@@ -33,6 +39,7 @@ export class ShipmentsService {
     private readonly otoClient: OtoClient,
     private readonly walletService: WalletService,
     private readonly notificationsService: NotificationsService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async createShipment(merchantId: string, dto: CreateShipmentDto) {
@@ -71,14 +78,21 @@ export class ShipmentsService {
       await this.shipmentRepository.save(saved);
     }
 
-    // Send Notification
-    await this.notificationsService.sendNotification({
-      userId: merchantId,
-      title: 'Shipment Created',
-      body: `Shipment #${saved.trackingNumber} has been created and assigned.`,
-      type: NotificationType.ShipmentCreated,
-      data: { shipmentId: saved.id, trackingNumber: saved.trackingNumber },
-    });
+    // Emit Domain Event
+    this.eventEmitter.emit(
+      DomainEventNames.SHIPMENT_CREATED,
+      new ShipmentCreatedEvent(
+        saved.id,
+        merchantId,
+        saved.trackingNumber,
+        saved.shippingCost,
+        saved.paymentMethod,
+        saved.codAmount,
+        saved.carrierName,
+        saved.recipientName,
+        saved.recipientCity,
+      ),
+    );
 
     return saved;
   }
@@ -201,24 +215,12 @@ export class ShipmentsService {
 
     if (dto.status === ShipmentStatus.Delivered && oldStatus !== ShipmentStatus.Delivered) {
       shipment.deliveredAt = new Date();
-      // If COD, credit COD amount to merchant wallet or record pending settlement
-      if (shipment.paymentMethod === PaymentMethod.COD && shipment.codAmount > 0 && !shipment.isCodSettled) {
-        await this.walletService.processCodSettlement(
-          shipment.merchantId,
-          shipment.id,
-          shipment.codAmount,
-          shipment.shippingCost,
-        );
+      if (shipment.paymentMethod === PaymentMethod.COD && shipment.codAmount > 0) {
         shipment.isCodSettled = true;
       }
     }
 
     if (dto.status === ShipmentStatus.Cancelled && oldStatus !== ShipmentStatus.Cancelled) {
-      // Release balance reservation if needed
-      await this.walletService.releaseShipmentReservation(
-        shipment.merchantId,
-        shipment.shippingCost,
-      );
       if (shipment.otoOrderId) {
         await this.otoClient.cancelOtoOrder(shipment.otoOrderId);
       }
@@ -226,14 +228,22 @@ export class ShipmentsService {
 
     const updated = await this.shipmentRepository.save(shipment);
 
-    // Notify user
-    await this.notificationsService.sendNotification({
-      userId: shipment.merchantId,
-      title: `Shipment ${dto.status}`,
-      body: `Shipment #${shipment.trackingNumber} is now ${dto.status}.`,
-      type: NotificationType.ShipmentStatusChanged,
-      data: { shipmentId: shipment.id, status: dto.status },
-    });
+    // Emit Domain Event for Decoupled Handlers (Wallet, Notifications, Analytics)
+    this.eventEmitter.emit(
+      DomainEventNames.SHIPMENT_STATUS_CHANGED,
+      new ShipmentStatusChangedEvent(
+        updated.id,
+        updated.merchantId,
+        updated.trackingNumber,
+        oldStatus,
+        updated.status,
+        updated.paymentMethod,
+        updated.codAmount,
+        updated.shippingCost,
+        dto.notes,
+        updated.carrierName,
+      ),
+    );
 
     return updated;
   }

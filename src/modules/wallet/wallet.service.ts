@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Wallet } from './entities/wallet.entity';
 import { WalletTransaction } from './entities/transaction.entity';
 import { BankTransferPayment } from './entities/bank-transfer-payment.entity';
@@ -21,7 +22,12 @@ import {
 } from './dtos/wallet.dto';
 import { PaginationParamsDto, PagedResult } from '../../common/dtos/pagination.dto';
 import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationType } from '../notifications/enums/notification.enum';
+import {
+  DomainEventNames,
+  WalletCreditedEvent,
+  BankTransferCreatedEvent,
+  BankTransferReviewedEvent,
+} from '../../common/events/domain-events';
 
 @Injectable()
 export class WalletService {
@@ -35,6 +41,7 @@ export class WalletService {
     @InjectRepository(BankTransferPayment)
     private readonly bankTransferRepository: Repository<BankTransferPayment>,
     private readonly notificationsService: NotificationsService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async getOrCreateWallet(merchantId: string): Promise<Wallet> {
@@ -133,6 +140,8 @@ export class WalletService {
     wallet.reservedBalance = Math.max(0, wallet.reservedBalance - shippingCost);
     await this.walletRepository.save(wallet);
 
+    const description = `COD Settlement for Shipment (Collected: ${codAmount} SAR, Deducted Shipping: ${shippingCost} SAR)`;
+
     // Record COD settlement transaction
     const tx = this.transactionRepository.create({
       walletId: wallet.id,
@@ -141,22 +150,29 @@ export class WalletService {
       type: TransactionType.CODSettlement,
       status: TransactionStatus.Completed,
       referenceId: shipmentId,
-      description: `COD Settlement for Shipment (Collected: ${codAmount} SAR, Deducted Shipping: ${shippingCost} SAR)`,
+      description,
       currency: 'SAR',
     });
     await this.transactionRepository.save(tx);
 
-    await this.notificationsService.sendNotification({
-      userId: merchantId,
-      title: 'COD Payment Settled',
-      body: `Net amount of ${netCredit} SAR has been credited to your wallet for delivery #${shipmentId.slice(0, 8)}.`,
-      type: NotificationType.WalletCredited,
-    });
+    // Emit Domain Event for Decoupled Modules
+    this.eventEmitter.emit(
+      DomainEventNames.WALLET_CREDITED,
+      new WalletCreditedEvent(
+        merchantId,
+        wallet.id,
+        netCredit,
+        TransactionType.CODSettlement,
+        shipmentId,
+        description,
+      ),
+    );
   }
 
   // Payment Top Up
   async initiateDeposit(merchantId: string, dto: InitiateDepositDto) {
     const wallet = await this.getOrCreateWallet(merchantId);
+    const description = `Online Top-up via ${dto.paymentMethod || 'Credit Card'}`;
 
     // Instant top-up simulation for online payment gateway (MyFatoorah demo flow)
     wallet.balance += dto.amount;
@@ -168,17 +184,23 @@ export class WalletService {
       amount: dto.amount,
       type: TransactionType.Deposit,
       status: TransactionStatus.Completed,
-      description: `Online Top-up via ${dto.paymentMethod || 'Credit Card'}`,
+      description,
       currency: 'SAR',
     });
     await this.transactionRepository.save(tx);
 
-    await this.notificationsService.sendNotification({
-      userId: merchantId,
-      title: 'Wallet Recharged',
-      body: `Your wallet has been credited with ${dto.amount} SAR.`,
-      type: NotificationType.WalletCredited,
-    });
+    // Emit Domain Event for Decoupled Modules
+    this.eventEmitter.emit(
+      DomainEventNames.WALLET_CREDITED,
+      new WalletCreditedEvent(
+        merchantId,
+        wallet.id,
+        dto.amount,
+        TransactionType.Deposit,
+        undefined,
+        description,
+      ),
+    );
 
     return {
       isSuccess: true,
@@ -198,7 +220,22 @@ export class WalletService {
       merchantId,
       status: BankTransferStatus.Pending,
     });
-    return this.bankTransferRepository.save(payment);
+    const saved = await this.bankTransferRepository.save(payment);
+
+    // Emit Domain Event
+    this.eventEmitter.emit(
+      DomainEventNames.BANK_TRANSFER_CREATED,
+      new BankTransferCreatedEvent(
+        saved.id,
+        merchantId,
+        saved.amount,
+        saved.bankName,
+        saved.accountNumber,
+        saved.receiptUrl,
+      ),
+    );
+
+    return saved;
   }
 
   async getMerchantBankTransfers(merchantId: string) {
@@ -254,6 +291,7 @@ export class WalletService {
       wallet.balance += transfer.amount;
       await this.walletRepository.save(wallet);
 
+      const description = `Bank Transfer Top-up (${transfer.bankName}) Approved by Admin`;
       const tx = this.transactionRepository.create({
         walletId: wallet.id,
         merchantId: transfer.merchantId,
@@ -261,25 +299,24 @@ export class WalletService {
         type: TransactionType.BankTransfer,
         status: TransactionStatus.Completed,
         referenceId: transfer.id,
-        description: `Bank Transfer Top-up (${transfer.bankName}) Approved by Admin`,
+        description,
         currency: 'SAR',
       });
       await this.transactionRepository.save(tx);
-
-      await this.notificationsService.sendNotification({
-        userId: transfer.merchantId,
-        title: 'Bank Transfer Approved',
-        body: `Your bank transfer of ${transfer.amount} SAR has been verified and added to your balance.`,
-        type: NotificationType.BankTransferApproved,
-      });
-    } else if (dto.status === BankTransferStatus.Rejected) {
-      await this.notificationsService.sendNotification({
-        userId: transfer.merchantId,
-        title: 'Bank Transfer Rejected',
-        body: `Your transfer of ${transfer.amount} SAR was rejected. Reason: ${dto.adminNotes || 'Verification failed'}`,
-        type: NotificationType.BankTransferRejected,
-      });
     }
+
+    // Emit Domain Event for Decoupled Modules (Notifications, Audit, etc.)
+    this.eventEmitter.emit(
+      DomainEventNames.BANK_TRANSFER_REVIEWED,
+      new BankTransferReviewedEvent(
+        transfer.id,
+        transfer.merchantId,
+        transfer.amount,
+        dto.status,
+        dto.adminNotes,
+        adminId,
+      ),
+    );
 
     return transfer;
   }

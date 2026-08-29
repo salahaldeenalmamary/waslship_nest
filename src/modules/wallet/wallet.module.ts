@@ -5,6 +5,7 @@ import { WalletTransaction } from './entities/transaction.entity';
 import { BankTransferPayment } from './entities/bank-transfer-payment.entity';
 import { WalletService } from './wallet.service';
 import { WalletController, AdminWalletController } from './wallet.controller';
+import { WalletEventsListener } from './listeners/wallet-events.listener';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ShipmentsModule } from '../shipments/shipments.module';
 
@@ -19,7 +20,7 @@ import { ShipmentsModule } from '../shipments/shipments.module';
     forwardRef(() => ShipmentsModule),
   ],
   controllers: [WalletController, AdminWalletController],
-  providers: [WalletService],
+  providers: [WalletService, WalletEventsListener],
   exports: [WalletService, TypeOrmModule],
 })
 export class WalletModule {}

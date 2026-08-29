@@ -1,6 +1,7 @@
 import { Module, Logger } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import * as net from 'net';
 
 // Entities
@@ -57,6 +58,12 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env'],
+    }),
+    EventEmitterModule.forRoot({
+      wildcard: true,
+      delimiter: '.',
+      verboseMemoryLeak: true,
+      ignoreErrors: false,
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
