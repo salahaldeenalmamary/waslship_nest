@@ -1,6 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Module, Logger } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import * as net from 'net';
 
 // Entities
 import { User } from './modules/users/entities/user.entity';
@@ -22,6 +23,35 @@ import { WalletModule } from './modules/wallet/wallet.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { DatabaseSeederService } from './common/services/seeder.service';
 
+const logger = new Logger('DatabaseConfig');
+
+async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    let isSettled = false;
+
+    const finalize = (success: boolean) => {
+      if (!isSettled) {
+        isSettled = true;
+        socket.removeAllListeners();
+        socket.destroy();
+        resolve(success);
+      }
+    };
+
+    socket.setTimeout(timeoutMs);
+    socket.once('connect', () => finalize(true));
+    socket.once('timeout', () => finalize(false));
+    socket.once('error', () => finalize(false));
+
+    try {
+      socket.connect(port, host);
+    } catch {
+      finalize(false);
+    }
+  });
+}
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -30,16 +60,60 @@ import { DatabaseSeederService } from './common/services/seeder.service';
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (config: ConfigService) => {
+      useFactory: async (config: ConfigService) => {
         const dbType = config.get<string>('DB_TYPE', 'sqlite');
-        const isPostgres = dbType === 'postgres' || Boolean(config.get<string>('DB_HOST')) || Boolean(config.get<string>('DATABASE_URL'));
+        const dbHost = config.get<string>('DB_HOST', 'localhost');
+        const dbPort = parseInt(config.get<string>('DB_PORT', '5432'), 10);
+        const databaseUrl = config.get<string>('DATABASE_URL');
+        const wantsPostgres = dbType === 'postgres' || Boolean(databaseUrl);
 
-        if (isPostgres) {
-          const databaseUrl = config.get<string>('DATABASE_URL');
+        if (wantsPostgres) {
+          let hostToCheck = dbHost;
+          let portToCheck = dbPort;
+
           if (databaseUrl) {
+            try {
+              const parsedUrl = new URL(databaseUrl);
+              hostToCheck = parsedUrl.hostname;
+              portToCheck = parsedUrl.port ? parseInt(parsedUrl.port, 10) : 5432;
+            } catch {
+              // fallback to defaults
+            }
+          }
+
+          const isPostgresLive = await isDatabasePortOpen(hostToCheck, portToCheck, 700);
+
+          if (isPostgresLive) {
+            logger.log(` Successfully connected to PostgreSQL instance at ${hostToCheck}:${portToCheck}`);
+            if (databaseUrl) {
+              return {
+                type: 'postgres',
+                url: databaseUrl,
+                entities: [
+                  User,
+                  UserAddress,
+                  Location,
+                  Shipment,
+                  OtoWebhookLog,
+                  Wallet,
+                  WalletTransaction,
+                  BankTransferPayment,
+                  NotificationEntity,
+                  DeviceToken,
+                ],
+                synchronize: config.get<string>('DB_SYNCHRONIZE', 'true') === 'true',
+                logging: config.get<string>('DB_LOGGING', 'false') === 'true',
+                ssl: config.get<string>('DB_SSL', 'false') === 'true' ? { rejectUnauthorized: false } : false,
+              };
+            }
+
             return {
               type: 'postgres',
-              url: databaseUrl,
+              host: dbHost,
+              port: dbPort,
+              username: config.get<string>('DB_USERNAME', 'postgres'),
+              password: config.get<string>('DB_PASSWORD', 'postgres123'),
+              database: config.get<string>('DB_DATABASE', 'waslship_db'),
               entities: [
                 User,
                 UserAddress,
@@ -56,31 +130,11 @@ import { DatabaseSeederService } from './common/services/seeder.service';
               logging: config.get<string>('DB_LOGGING', 'false') === 'true',
               ssl: config.get<string>('DB_SSL', 'false') === 'true' ? { rejectUnauthorized: false } : false,
             };
+          } else {
+            logger.warn(
+              ` PostgreSQL at ${hostToCheck}:${portToCheck} is not reachable in this container. Using embedded SQLite (waslship.db) so the API and Swagger UI run seamlessly.`,
+            );
           }
-
-          return {
-            type: 'postgres',
-            host: config.get<string>('DB_HOST', 'localhost'),
-            port: parseInt(config.get<string>('DB_PORT', '5432'), 10),
-            username: config.get<string>('DB_USERNAME', 'postgres'),
-            password: config.get<string>('DB_PASSWORD', 'postgres123'),
-            database: config.get<string>('DB_DATABASE', 'waslship_db'),
-            entities: [
-              User,
-              UserAddress,
-              Location,
-              Shipment,
-              OtoWebhookLog,
-              Wallet,
-              WalletTransaction,
-              BankTransferPayment,
-              NotificationEntity,
-              DeviceToken,
-            ],
-            synchronize: config.get<string>('DB_SYNCHRONIZE', 'true') === 'true',
-            logging: config.get<string>('DB_LOGGING', 'false') === 'true',
-            ssl: config.get<string>('DB_SSL', 'false') === 'true' ? { rejectUnauthorized: false } : false,
-          };
         }
 
         return {
