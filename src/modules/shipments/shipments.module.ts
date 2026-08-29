@@ -3,11 +3,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Shipment } from './entities/shipment.entity';
 import { OtoWebhookLog } from './entities/oto-webhook-log.entity';
 import { ShipmentsService } from './shipments.service';
-import {
-  ShipmentsController,
-  TrackingController,
-  AdminShipmentsController,
-} from './shipments.controller';
+import { ShipmentsController } from './shipments.controller';
+import { TrackingController } from './tracking.controller';
+import { AdminShipmentsController } from './admin-shipments.controller';
 import { OtoClient } from './services/oto.client';
 import { WalletModule } from '../wallet/wallet.module';
 import { NotificationsModule } from '../notifications/notifications.module';

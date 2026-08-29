@@ -2,9 +2,7 @@ import {
   Controller,
   Get,
   Post,
-  Put,
   Body,
-  Param,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -17,13 +15,10 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { WalletService } from './wallet.service';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { Roles, RolesGuard } from '../auth/roles.guard';
-import { UserRole } from '../users/enums/user.enum';
-import { BankTransferStatus, TransactionType } from './enums/wallet.enum';
+import { TransactionType } from './enums/wallet.enum';
 import {
   InitiateDepositDto,
   CreateBankTransferPaymentDto,
-  ReviewBankTransferDto,
 } from './dtos/wallet.dto';
 import { PaginationParamsDto } from '../../common/dtos/pagination.dto';
 
@@ -73,34 +68,5 @@ export class WalletController {
   @ApiOperation({ summary: 'List merchant submitted bank transfers' })
   async getMyBankTransfers(@CurrentUser('id') merchantId: string) {
     return this.walletService.getMerchantBankTransfers(merchantId);
-  }
-}
-
-@ApiTags('Admin Bank Transfers & Financials')
-@ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles(UserRole.Admin, UserRole.SuperAdmin)
-@Controller('api/admin/bank-transfers')
-export class AdminWalletController {
-  constructor(private readonly walletService: WalletService) {}
-
-  @Get()
-  @ApiOperation({ summary: 'List all pending/reviewed bank transfers (Admin)' })
-  @ApiQuery({ name: 'status', enum: BankTransferStatus, required: false })
-  async getAllBankTransfers(
-    @Query() pagination: PaginationParamsDto,
-    @Query('status') status?: BankTransferStatus,
-  ) {
-    return this.walletService.getAllBankTransfersAdmin(pagination, status);
-  }
-
-  @Put(':id/review')
-  @ApiOperation({ summary: 'Approve or Reject Bank Transfer (Admin)' })
-  async reviewBankTransfer(
-    @CurrentUser('id') adminId: string,
-    @Param('id') transferId: string,
-    @Body() dto: ReviewBankTransferDto,
-  ) {
-    return this.walletService.reviewBankTransfer(transferId, adminId, dto);
   }
 }
