@@ -1,19 +1,26 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { Request, Response } from 'express';
+import { join } from 'path';
 
 async function bootstrap() {
   const logger = new Logger('WaslShipBootstrap');
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     cors: {
       origin: '*',
       methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
       credentials: true,
     },
+  });
+
+  // Serve static files for uploads
+  app.useStaticAssets(join(process.cwd(), 'public'), {
+    prefix: '/',
   });
 
   // Global Pipelines
@@ -59,6 +66,7 @@ Comprehensive logistics platform rewritten in NestJS & TypeORM.
     .addTag('Admin Operations & Webhooks', 'Admin shipment oversight and OTO webhooks')
     .addTag('Admin Bank Transfers & Financials', 'Bank transfer approvals')
     .addTag('Notifications & FCM Push', 'Notifications and device tokens')
+    .addTag('Storage & Media', 'Upload and manage media files')
     .addTag('System & Health', 'Health checks and database connectivity monitoring')
     .build();
 

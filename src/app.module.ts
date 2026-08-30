@@ -15,6 +15,7 @@ import { WalletTransaction } from './modules/wallet/entities/transaction.entity'
 import { BankTransferPayment } from './modules/wallet/entities/bank-transfer-payment.entity';
 import { NotificationEntity } from './modules/notifications/entities/notification.entity';
 import { DeviceToken } from './modules/notifications/entities/device-token.entity';
+import { MediaAttachment } from './modules/storage/entities/media-attachment.entity';
 
 // Modules
 import { AuthModule } from './modules/auth/auth.module';
@@ -23,6 +24,7 @@ import { ShipmentsModule } from './modules/shipments/shipments.module';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { HealthModule } from './modules/health/health.module';
+import { StorageModule } from './modules/storage/storage.module';
 import { DatabaseSeederService } from './common/services/seeder.service';
 
 const logger = new Logger('DatabaseConfig');
@@ -108,6 +110,7 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
                   BankTransferPayment,
                   NotificationEntity,
                   DeviceToken,
+                  MediaAttachment,
                 ],
                 synchronize: config.get<string>('DB_SYNCHRONIZE', 'true') === 'true',
                 logging: config.get<string>('DB_LOGGING', 'false') === 'true',
@@ -133,6 +136,7 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
                 BankTransferPayment,
                 NotificationEntity,
                 DeviceToken,
+                MediaAttachment,
               ],
               synchronize: config.get<string>('DB_SYNCHRONIZE', 'true') === 'true',
               logging: config.get<string>('DB_LOGGING', 'false') === 'true',
@@ -159,6 +163,7 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
             BankTransferPayment,
             NotificationEntity,
             DeviceToken,
+            MediaAttachment,
           ],
           synchronize: true,
           logging: false,
@@ -173,6 +178,7 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
     WalletModule,
     NotificationsModule,
     HealthModule,
+    StorageModule,
   ],
   providers: [DatabaseSeederService],
 })
