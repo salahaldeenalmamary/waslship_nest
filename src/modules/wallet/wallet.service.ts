@@ -245,6 +245,24 @@ export class WalletService {
     });
   }
 
+  async getBankTransferById(transferId: string, merchantId?: string) {
+    const where: any = { id: transferId, isDeleted: false };
+    if (merchantId) {
+      where.merchantId = merchantId;
+    }
+    const transfer = await this.bankTransferRepository.findOne({ where });
+    if (!transfer) {
+      throw new NotFoundException(`Bank transfer with ID "${transferId}" not found`);
+    }
+    return transfer;
+  }
+
+  async updateReceiptUrl(transferId: string, receiptUrl: string, merchantId?: string) {
+    const transfer = await this.getBankTransferById(transferId, merchantId);
+    transfer.receiptUrl = receiptUrl;
+    return this.bankTransferRepository.save(transfer);
+  }
+
   // Admin Bank Transfer Actions
   async getAllBankTransfersAdmin(
     pagination: PaginationParamsDto,

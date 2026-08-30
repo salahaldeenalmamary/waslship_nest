@@ -33,6 +33,9 @@ export class User {
   fullName: string;
 
   @Column({ nullable: true })
+  avatarUrl: string;
+
+  @Column({ nullable: true })
   companyName: string;
 
   @Column({ default: 'Merchant' })

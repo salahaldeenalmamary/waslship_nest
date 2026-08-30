@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsEnum,
   IsNotEmpty,
@@ -11,6 +12,7 @@ import { BankTransferStatus, TransactionType } from '../enums/wallet.enum';
 
 export class InitiateDepositDto {
   @ApiProperty({ example: 200.0 })
+  @Type(() => Number)
   @IsNumber()
   @IsPositive()
   amount: number;
@@ -22,6 +24,7 @@ export class InitiateDepositDto {
 
 export class CreateBankTransferPaymentDto {
   @ApiProperty({ example: 1000.0 })
+  @Type(() => Number)
   @IsNumber()
   @IsPositive()
   amount: number;

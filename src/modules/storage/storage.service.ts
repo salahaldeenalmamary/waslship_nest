@@ -7,7 +7,8 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Request } from 'express';
-import { existsSync, unlinkSync } from 'fs';
+import { existsSync, unlinkSync, mkdirSync, writeFileSync } from 'fs';
+import { extname, join } from 'path';
 import { MediaAttachment } from './entities/media-attachment.entity';
 import {
   UploadMediaOptionsDto,
@@ -38,18 +39,36 @@ export class StorageService {
       throw new BadRequestException('No file uploaded');
     }
 
-    const protocol = req.protocol;
+    const uploadDir = join(process.cwd(), 'public', 'uploads');
+    if (!existsSync(uploadDir)) {
+      mkdirSync(uploadDir, { recursive: true });
+    }
+
+    let filename = file.filename;
+    let filePath = file.path;
+
+    if (!filename) {
+      const ext = extname(file.originalname || '') || '.bin';
+      const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+      filename = `${file.fieldname || 'file'}-${uniqueSuffix}${ext}`;
+      filePath = join(uploadDir, filename);
+
+      if (file.buffer) {
+        writeFileSync(filePath, file.buffer);
+      }
+    }
+
+    const protocol = req.protocol || 'http';
     const host = req.get('host') || 'localhost:3000';
-    const filename = file.filename;
     const fileUrl = `${protocol}://${host}/uploads/${filename}`;
 
     const attachment = this.mediaRepo.create({
       fileName: filename,
-      originalName: file.originalname,
-      mimeType: file.mimetype,
-      size: file.size,
+      originalName: file.originalname || filename,
+      mimeType: file.mimetype || 'application/octet-stream',
+      size: file.size || (file.buffer ? file.buffer.length : 0),
       url: fileUrl,
-      filePath: file.path,
+      filePath: filePath,
       entityType: options?.entityType,
       entityId: options?.entityId,
       tag: options?.tag,

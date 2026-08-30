@@ -33,11 +33,16 @@ export class UsersService {
   async getProfile(userId: string) {
     const user = await this.userRepository.findOne({
       where: { id: userId, isDeleted: false },
-      relations: ['addresses'],
     });
     if (!user) throw new NotFoundException('User profile not found');
+
+    const addresses = await this.addressRepository.find({
+      where: { userId, isDeleted: false },
+      order: { isDefault: 'DESC', createdAt: 'DESC' },
+    });
+
     const { passwordHash, otpCode, ...safeUser } = user;
-    return safeUser;
+    return { ...safeUser, addresses };
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
@@ -49,6 +54,28 @@ export class UsersService {
     if (dto.fullName) user.fullName = dto.fullName;
     if (dto.companyName !== undefined) user.companyName = dto.companyName;
 
+    await this.userRepository.save(user);
+    return this.getProfile(userId);
+  }
+
+  async updateAvatar(userId: string, avatarUrl: string) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId, isDeleted: false },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    user.avatarUrl = avatarUrl;
+    await this.userRepository.save(user);
+    return this.getProfile(userId);
+  }
+
+  async removeAvatar(userId: string) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId, isDeleted: false },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    user.avatarUrl = null as any;
     await this.userRepository.save(user);
     return this.getProfile(userId);
   }

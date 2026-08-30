@@ -9,6 +9,7 @@ import { AdminWalletController } from './admin-wallet.controller';
 import { WalletEventsListener } from './listeners/wallet-events.listener';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ShipmentsModule } from '../shipments/shipments.module';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ShipmentsModule } from '../shipments/shipments.module';
     ]),
     NotificationsModule,
     forwardRef(() => ShipmentsModule),
+    StorageModule,
   ],
   controllers: [WalletController, AdminWalletController],
   providers: [WalletService, WalletEventsListener],

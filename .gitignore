@@ -16,6 +16,20 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 
+# Uploaded files and media
+public/uploads/*
+!public/uploads/.gitkeep
+uploads/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.pdf
+!public/favicon.*
+!public/logo.*
+!public/assets/**
+
 # IDEs & OS
 .DS_Store
 .vscode/*
