@@ -29,7 +29,6 @@ uploads/
 !public/favicon.*
 !public/logo.*
 !public/assets/**
-
 # IDEs & OS
 .DS_Store
 .vscode/*

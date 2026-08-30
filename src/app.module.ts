@@ -60,7 +60,12 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env'],
+      envFilePath: [
+        `.env.${process.env.NODE_ENV || 'development'}.local`,
+        `.env.${process.env.NODE_ENV || 'development'}`,
+        '.env.local',
+        '.env',
+      ],
     }),
     EventEmitterModule.forRoot({
       wildcard: true,

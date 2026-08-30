@@ -1,7 +1,9 @@
 version: '3.8'
 
 services:
-  # PostgreSQL 16 Database
+  # ==========================================
+  # 1. PostgreSQL 16 Relational Database
+  # ==========================================
   postgres:
     image: postgres:16-alpine
     container_name: waslship_postgres
@@ -20,7 +22,10 @@ services:
       timeout: 5s
       retries: 5
 
-  # Adminer (Web Database GUI for PostgreSQL)
+  # ==========================================
+  # 2. Adminer (Web Database GUI for PostgreSQL)
+  # Accessible at: http://localhost:8080
+  # ==========================================
   adminer:
     image: adminer:latest
     container_name: waslship_adminer
@@ -30,7 +35,53 @@ services:
     depends_on:
       - postgres
 
-  # WaslShip NestJS API Service
+  # ==========================================
+  # 3. MinIO S3 Object Storage
+  # S3 API: http://localhost:9000
+  # Web Console UI: http://localhost:9001
+  # ==========================================
+  minio:
+    image: minio/minio:latest
+    container_name: waslship_minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000" # MinIO S3 API
+      - "9001:9001" # MinIO Web Management Console
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================
+  # 4. Auto-Provision Default MinIO Bucket
+  # Automatically creates 'waslship-media' bucket and sets public read access
+  # ==========================================
+  minio-init:
+    image: minio/mc:latest
+    container_name: waslship_minio_init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin123};
+      /usr/bin/mc mb myminio/${MINIO_BUCKET:-waslship-media} --ignore-existing;
+      /usr/bin/mc anonymous set download myminio/${MINIO_BUCKET:-waslship-media};
+      exit 0;
+      "
+
+  # ==========================================
+  # 5. WaslShip NestJS API Service
+  # Accessible at: http://localhost:3000
+  # Swagger Docs at: http://localhost:3000/docs
+  # ==========================================
   api:
     build:
       context: .
@@ -40,6 +91,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
+      # Database Connection
       DB_TYPE: postgres
       DB_HOST: postgres
       DB_PORT: 5432
@@ -47,12 +99,26 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres123}
       DB_DATABASE: ${DB_DATABASE:-waslship_db}
       DB_SYNCHRONIZE: "true"
+      # Security & JWT
       JWT_SECRET: ${JWT_SECRET:-waslship_super_secret_jwt_key_2026}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-7d}
+      # Storage Configuration (MinIO for Production Docker)
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-minio}
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_BUCKET: ${MINIO_BUCKET:-waslship-media}
+      MINIO_PUBLIC_URL: http://localhost:9000/${MINIO_BUCKET:-waslship-media}
+      # Third-Party Integrations
       OTO_BASE_URL: ${OTO_BASE_URL:-https://api.tryoto.com/rest/v2}
     ports:
       - "3000:3000"
     depends_on:
       postgres:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     volumes:
       - .:/app
@@ -61,3 +127,6 @@ services:
 volumes:
   pgdata:
     driver: local
+  minio_data:
+    driver: local
+
