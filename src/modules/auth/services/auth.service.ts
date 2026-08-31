@@ -8,16 +8,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { User } from '../users/entities/user.entity';
-import { UserRole } from '../users/enums/user.enum';
+import { User } from '../../users/entities/user.entity';
+import { UserRole } from '../../users/enums/user.enum';
 import {
   RegisterDto,
   LoginDto,
   VerifyOtpDto,
   ForgotPasswordDto,
   ResetPasswordDto,
-} from './dtos/auth.dto';
-import { Wallet } from '../wallet/entities/wallet.entity';
+} from '../dtos/auth.dto';
+import { Wallet } from '../../wallet/entities/wallet.entity';
 
 @Injectable()
 export class AuthService {

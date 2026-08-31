@@ -14,13 +14,13 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
-import { WalletService } from './wallet.service';
-import { CurrentUser } from '../auth/current-user.decorator';
-import { Roles, RolesGuard } from '../auth/roles.guard';
-import { UserRole } from '../users/enums/user.enum';
-import { BankTransferStatus } from './enums/wallet.enum';
-import { ReviewBankTransferDto } from './dtos/wallet.dto';
-import { PaginationParamsDto } from '../../common/dtos/pagination.dto';
+import { BankTransferPaymentService } from '../services/bank-transfer-payment.service';
+import { CurrentUser } from '../../auth/current-user.decorator';
+import { Roles, RolesGuard } from '../../auth/roles.guard';
+import { UserRole } from '../../users/enums/user.enum';
+import { BankTransferStatus } from '../enums/wallet.enum';
+import { ReviewBankTransferDto } from '../dtos/wallet.dto';
+import { PaginationParamsDto } from '../../../common/dtos/pagination.dto';
 
 @ApiTags('Admin Bank Transfers & Financials')
 @ApiBearerAuth()
@@ -28,7 +28,9 @@ import { PaginationParamsDto } from '../../common/dtos/pagination.dto';
 @Roles(UserRole.Admin, UserRole.SuperAdmin)
 @Controller('api/admin/bank-transfers')
 export class AdminWalletController {
-  constructor(private readonly walletService: WalletService) {}
+  constructor(
+    private readonly bankTransferPaymentService: BankTransferPaymentService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List all pending/reviewed bank transfers (Admin)' })
@@ -37,7 +39,7 @@ export class AdminWalletController {
     @Query() pagination: PaginationParamsDto,
     @Query('status') status?: BankTransferStatus,
   ) {
-    return this.walletService.getAllBankTransfersAdmin(pagination, status);
+    return this.bankTransferPaymentService.getAllBankTransfersAdmin(pagination, status);
   }
 
   @Put(':id/review')
@@ -47,6 +49,6 @@ export class AdminWalletController {
     @Param('id') transferId: string,
     @Body() dto: ReviewBankTransferDto,
   ) {
-    return this.walletService.reviewBankTransfer(transferId, adminId, dto);
+    return this.bankTransferPaymentService.reviewBankTransfer(transferId, adminId, dto);
   }
 }

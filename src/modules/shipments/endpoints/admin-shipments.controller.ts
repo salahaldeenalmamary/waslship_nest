@@ -15,12 +15,12 @@ import {
   ApiHeader,
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
-import { ShipmentsService } from './shipments.service';
-import { CurrentUser } from '../auth/current-user.decorator';
-import { Roles, RolesGuard } from '../auth/roles.guard';
-import { UserRole } from '../users/enums/user.enum';
-import { ShipmentStatus } from './enums/shipment.enum';
-import { PaginationParamsDto } from '../../common/dtos/pagination.dto';
+import { ShipmentsService } from '../services/shipments.service';
+import { CurrentUser } from '../../auth/current-user.decorator';
+import { Roles, RolesGuard } from '../../auth/roles.guard';
+import { UserRole } from '../../users/enums/user.enum';
+import { ShipmentStatus } from '../enums/shipment.enum';
+import { PaginationParamsDto } from '../../../common/dtos/pagination.dto';
 
 @ApiTags('Admin Operations & Webhooks')
 @Controller('api')

@@ -4,14 +4,15 @@ import { Wallet } from './entities/wallet.entity';
 import { WalletTransaction } from './entities/transaction.entity';
 import { BankTransferPayment } from './entities/bank-transfer-payment.entity';
 import { BankAccount } from './entities/bank-account.entity';
-import { WalletService } from './wallet.service';
-import { BankAccountService } from './bank-account.service';
-import { WalletController } from './wallet.controller';
-import { AdminWalletController } from './admin-wallet.controller';
+import { WalletService } from './services/wallet.service';
+import { BankAccountService } from './services/bank-account.service';
+import { BankTransferPaymentService } from './services/bank-transfer-payment.service';
+import { WalletController } from './endpoints/wallet.controller';
+import { AdminWalletController } from './endpoints/admin-wallet.controller';
 import {
   BankAccountController,
   AdminBankAccountController,
-} from './bank-account.controller';
+} from './endpoints/bank-account.controller';
 import { WalletEventsListener } from './listeners/wallet-events.listener';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ShipmentsModule } from '../shipments/shipments.module';
@@ -35,7 +36,12 @@ import { StorageModule } from '../storage/storage.module';
     BankAccountController,
     AdminBankAccountController,
   ],
-  providers: [WalletService, BankAccountService, WalletEventsListener],
-  exports: [WalletService, BankAccountService, TypeOrmModule],
+  providers: [
+    WalletService,
+    BankAccountService,
+    BankTransferPaymentService,
+    WalletEventsListener,
+  ],
+  exports: [WalletService, BankAccountService, BankTransferPaymentService, TypeOrmModule],
 })
 export class WalletModule {}

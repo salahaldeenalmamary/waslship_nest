@@ -14,13 +14,13 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
-import { BankAccountService } from './bank-account.service';
-import { Roles, RolesGuard } from '../auth/roles.guard';
-import { UserRole } from '../users/enums/user.enum';
+import { BankAccountService } from '../services/bank-account.service';
+import { Roles, RolesGuard } from '../../auth/roles.guard';
+import { UserRole } from '../../users/enums/user.enum';
 import {
   CreateBankAccountDto,
   UpdateBankAccountDto,
-} from './dtos/wallet.dto';
+} from '../dtos/wallet.dto';
 
 @ApiTags('Bank Accounts')
 @Controller('api/bank-accounts')

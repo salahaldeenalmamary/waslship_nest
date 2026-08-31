@@ -1,6 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
-import { UsersService } from './users.service';
+import { UsersService } from '../services/users.service';
 
 @ApiTags('Locations & Cities')
 @Controller('api/locations')

@@ -7,25 +7,25 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Shipment } from './entities/shipment.entity';
-import { OtoWebhookLog } from './entities/oto-webhook-log.entity';
-import { ShipmentStatus, PaymentMethod } from './enums/shipment.enum';
+import { Shipment } from '../entities/shipment.entity';
+import { OtoWebhookLog } from '../entities/oto-webhook-log.entity';
+import { ShipmentStatus, PaymentMethod } from '../enums/shipment.enum';
 import {
   CreateShipmentDto,
   BulkCreateOrderDto,
   UpdateShipmentStatusDto,
   DeliveryFeeCheckDto,
-} from './dtos/shipment.dto';
-import { OtoClient } from './services/oto.client';
-import { PaginationParamsDto, PagedResult } from '../../common/dtos/pagination.dto';
-import { WalletService } from '../wallet/wallet.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationType } from '../notifications/enums/notification.enum';
+} from '../dtos/shipment.dto';
+import { OtoClient } from './oto.client';
+import { PaginationParamsDto, PagedResult } from '../../../common/dtos/pagination.dto';
+import { WalletService } from '../../wallet/services/wallet.service';
+import { NotificationsService } from '../../notifications/services/notifications.service';
+import { NotificationType } from '../../notifications/enums/notification.enum';
 import {
   DomainEventNames,
   ShipmentCreatedEvent,
   ShipmentStatusChangedEvent,
-} from '../../common/events/domain-events';
+} from '../../../common/events/domain-events';
 
 @Injectable()
 export class ShipmentsService {

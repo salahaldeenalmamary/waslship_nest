@@ -10,13 +10,13 @@ import { Request } from 'express';
 import { existsSync, unlinkSync, mkdirSync, writeFileSync } from 'fs';
 import { extname, join } from 'path';
 import * as Minio from 'minio';
-import { MediaAttachment } from './entities/media-attachment.entity';
+import { MediaAttachment } from '../entities/media-attachment.entity';
 import {
   UploadMediaOptionsDto,
   AttachMediaDto,
   QueryMediaAttachmentsDto,
-} from './dtos/storage.dto';
-import { PagedResult } from '../../common/dtos/pagination.dto';
+} from '../dtos/storage.dto';
+import { PagedResult } from '../../../common/dtos/pagination.dto';
 
 @Injectable()
 export class StorageService {

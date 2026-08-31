@@ -26,13 +26,13 @@ import {
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { Request } from 'express';
-import { StorageService } from './storage.service';
-import { CurrentUser } from '../auth/current-user.decorator';
+import { StorageService } from '../services/storage.service';
+import { CurrentUser } from '../../auth/current-user.decorator';
 import {
   UploadMediaOptionsDto,
   AttachMediaDto,
   QueryMediaAttachmentsDto,
-} from './dtos/storage.dto';
+} from '../dtos/storage.dto';
 
 @ApiTags('Storage & Media')
 @ApiBearerAuth()

@@ -5,7 +5,7 @@ import {
   ShipmentStatusChangedEvent,
 } from '../../../common/events/domain-events';
 import { ShipmentStatus, PaymentMethod } from '../../shipments/enums/shipment.enum';
-import { WalletService } from '../wallet.service';
+import { WalletService } from '../services/wallet.service';
 
 @Injectable()
 export class WalletEventsListener {

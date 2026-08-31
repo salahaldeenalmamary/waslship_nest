@@ -23,15 +23,16 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
 import { Request } from 'express';
-import { WalletService } from './wallet.service';
-import { StorageService } from '../storage/storage.service';
-import { CurrentUser } from '../auth/current-user.decorator';
-import { TransactionType } from './enums/wallet.enum';
+import { WalletService } from '../services/wallet.service';
+import { BankTransferPaymentService } from '../services/bank-transfer-payment.service';
+import { StorageService } from '../../storage/services/storage.service';
+import { CurrentUser } from '../../auth/current-user.decorator';
+import { TransactionType } from '../enums/wallet.enum';
 import {
   InitiateDepositDto,
   CreateBankTransferPaymentDto,
-} from './dtos/wallet.dto';
-import { PaginationParamsDto } from '../../common/dtos/pagination.dto';
+} from '../dtos/wallet.dto';
+import { PaginationParamsDto } from '../../../common/dtos/pagination.dto';
 
 @ApiTags('Merchant Wallet & Transactions')
 @ApiBearerAuth()
@@ -40,6 +41,7 @@ import { PaginationParamsDto } from '../../common/dtos/pagination.dto';
 export class WalletController {
   constructor(
     private readonly walletService: WalletService,
+    private readonly bankTransferPaymentService: BankTransferPaymentService,
     private readonly storageService: StorageService,
   ) {}
 
@@ -75,7 +77,7 @@ export class WalletController {
     @CurrentUser('id') merchantId: string,
     @Body() dto: CreateBankTransferPaymentDto,
   ) {
-    return this.walletService.createBankTransfer(merchantId, dto);
+    return this.bankTransferPaymentService.createBankTransfer(merchantId, dto);
   }
 
   @Post('bank-transfers/with-receipt')
@@ -112,7 +114,7 @@ export class WalletController {
     @Req() req: Request,
   ) {
     // 1. Create the bank transfer entity record
-    const payment = await this.walletService.createBankTransfer(merchantId, dto);
+    const payment = await this.bankTransferPaymentService.createBankTransfer(merchantId, dto);
 
     // 2. Upload and attach the receipt with polymorphic entity tracking
     const attachment = await this.storageService.handleFileUpload(
@@ -127,7 +129,7 @@ export class WalletController {
     );
 
     // 3. Store the direct receipt URL on the payment record for instant read access
-    const updatedPayment = await this.walletService.updateReceiptUrl(
+    const updatedPayment = await this.bankTransferPaymentService.updateReceiptUrl(
       payment.id,
       attachment.url,
       merchantId,
@@ -169,7 +171,7 @@ export class WalletController {
     @Req() req: Request,
   ) {
     // Verify ownership
-    await this.walletService.getBankTransferById(transferId, merchantId);
+    await this.bankTransferPaymentService.getBankTransferById(transferId, merchantId);
 
     // Save attachment
     const attachment = await this.storageService.handleFileUpload(
@@ -184,7 +186,7 @@ export class WalletController {
     );
 
     // Update payment
-    const updated = await this.walletService.updateReceiptUrl(
+    const updated = await this.bankTransferPaymentService.updateReceiptUrl(
       transferId,
       attachment.url,
       merchantId,
@@ -200,6 +202,6 @@ export class WalletController {
   @Get('bank-transfers')
   @ApiOperation({ summary: 'List merchant submitted bank transfers' })
   async getMyBankTransfers(@CurrentUser('id') merchantId: string) {
-    return this.walletService.getMerchantBankTransfers(merchantId);
+    return this.bankTransferPaymentService.getMerchantBankTransfers(merchantId);
   }
 }

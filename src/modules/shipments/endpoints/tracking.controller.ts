@@ -6,8 +6,8 @@ import {
   Body,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { ShipmentsService } from './shipments.service';
-import { DeliveryFeeCheckDto } from './dtos/shipment.dto';
+import { ShipmentsService } from '../services/shipments.service';
+import { DeliveryFeeCheckDto } from '../dtos/shipment.dto';
 
 @ApiTags('Public Tracking & Carrier Pricing')
 @Controller('api/tracking')

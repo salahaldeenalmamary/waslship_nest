@@ -6,18 +6,18 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { User } from './entities/user.entity';
-import { UserAddress } from './entities/user-address.entity';
-import { Location } from './entities/location.entity';
-import { UserRole } from './enums/user.enum';
+import { User } from '../entities/user.entity';
+import { UserAddress } from '../entities/user-address.entity';
+import { Location } from '../entities/location.entity';
+import { UserRole } from '../enums/user.enum';
 import {
   UpdateProfileDto,
   ChangePasswordDto,
   CreateUserAddressDto,
   UpdateUserAddressDto,
   CreateAdminDto,
-} from './dtos/user.dto';
-import { PaginationParamsDto, PagedResult } from '../../common/dtos/pagination.dto';
+} from '../dtos/user.dto';
+import { PaginationParamsDto, PagedResult } from '../../../common/dtos/pagination.dto';
 
 @Injectable()
 export class UsersService {

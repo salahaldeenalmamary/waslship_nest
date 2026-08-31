@@ -4,11 +4,11 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserBankAccount } from './entities/user-bank-account.entity';
+import { UserBankAccount } from '../entities/user-bank-account.entity';
 import {
   CreateUserBankAccountDto,
   UpdateUserBankAccountDto,
-} from './dtos/user-bank-account.dto';
+} from '../dtos/user-bank-account.dto';
 
 @Injectable()
 export class UserBankAccountService {

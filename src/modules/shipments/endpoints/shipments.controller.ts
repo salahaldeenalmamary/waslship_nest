@@ -15,15 +15,15 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
-import { ShipmentsService } from './shipments.service';
-import { CurrentUser } from '../auth/current-user.decorator';
-import { ShipmentStatus } from './enums/shipment.enum';
+import { ShipmentsService } from '../services/shipments.service';
+import { CurrentUser } from '../../auth/current-user.decorator';
+import { ShipmentStatus } from '../enums/shipment.enum';
 import {
   CreateShipmentDto,
   BulkCreateOrderDto,
   UpdateShipmentStatusDto,
-} from './dtos/shipment.dto';
-import { PaginationParamsDto } from '../../common/dtos/pagination.dto';
+} from '../dtos/shipment.dto';
+import { PaginationParamsDto } from '../../../common/dtos/pagination.dto';
 
 @ApiTags('Shipments (Merchant)')
 @ApiBearerAuth()

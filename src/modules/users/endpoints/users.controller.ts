@@ -23,15 +23,15 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
 import { Request } from 'express';
-import { UsersService } from './users.service';
-import { StorageService } from '../storage/storage.service';
-import { CurrentUser } from '../auth/current-user.decorator';
+import { UsersService } from '../services/users.service';
+import { StorageService } from '../../storage/services/storage.service';
+import { CurrentUser } from '../../auth/current-user.decorator';
 import {
   UpdateProfileDto,
   ChangePasswordDto,
   CreateUserAddressDto,
   UpdateUserAddressDto,
-} from './dtos/user.dto';
+} from '../dtos/user.dto';
 
 @ApiTags('User Profile & Addresses')
 @ApiBearerAuth()

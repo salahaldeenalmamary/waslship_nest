@@ -10,12 +10,12 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
-import { UserBankAccountService } from './user-bank-account.service';
-import { CurrentUser } from '../auth/current-user.decorator';
+import { UserBankAccountService } from '../services/user-bank-account.service';
+import { CurrentUser } from '../../auth/current-user.decorator';
 import {
   CreateUserBankAccountDto,
   UpdateUserBankAccountDto,
-} from './dtos/user-bank-account.dto';
+} from '../dtos/user-bank-account.dto';
 
 @ApiTags('User Bank Accounts')
 @ApiBearerAuth()

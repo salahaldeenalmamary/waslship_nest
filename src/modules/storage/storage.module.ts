@@ -5,8 +5,8 @@ import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { MediaAttachment } from './entities/media-attachment.entity';
-import { StorageController } from './storage.controller';
-import { StorageService } from './storage.service';
+import { StorageController } from './endpoints/storage.controller';
+import { StorageService } from './services/storage.service';
 
 @Module({
   imports: [

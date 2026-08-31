@@ -1,13 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { NotificationEntity } from './entities/notification.entity';
-import { DeviceToken } from './entities/device-token.entity';
+import { NotificationEntity } from '../entities/notification.entity';
+import { DeviceToken } from '../entities/device-token.entity';
 import {
   RegisterDeviceTokenDto,
   SendPushNotificationDto,
-} from './dtos/notification.dto';
-import { PaginationParamsDto, PagedResult } from '../../common/dtos/pagination.dto';
+} from '../dtos/notification.dto';
+import { PaginationParamsDto, PagedResult } from '../../../common/dtos/pagination.dto';
 
 @Injectable()
 export class NotificationsService {

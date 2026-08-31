@@ -5,8 +5,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { BankAccount } from './entities/bank-account.entity';
-import { CreateBankAccountDto, UpdateBankAccountDto } from './dtos/wallet.dto';
+import { BankAccount } from '../entities/bank-account.entity';
+import { CreateBankAccountDto, UpdateBankAccountDto } from '../dtos/wallet.dto';
 
 @Injectable()
 export class BankAccountService {

@@ -8,7 +8,7 @@ import {
   BankTransferCreatedEvent,
   BankTransferReviewedEvent,
 } from '../../../common/events/domain-events';
-import { NotificationsService } from '../notifications.service';
+import { NotificationsService } from '../services/notifications.service';
 import { NotificationType } from '../enums/notification.enum';
 import { BankTransferStatus } from '../../wallet/enums/wallet.enum';
 

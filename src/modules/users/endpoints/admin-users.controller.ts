@@ -15,14 +15,14 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
-import { UsersService } from './users.service';
-import { Roles, RolesGuard } from '../auth/roles.guard';
-import { UserRole } from './enums/user.enum';
+import { UsersService } from '../services/users.service';
+import { Roles, RolesGuard } from '../../auth/roles.guard';
+import { UserRole } from '../enums/user.enum';
 import {
   UpdateUserStatusDto,
   CreateAdminDto,
-} from './dtos/user.dto';
-import { PaginationParamsDto } from '../../common/dtos/pagination.dto';
+} from '../dtos/user.dto';
+import { PaginationParamsDto } from '../../../common/dtos/pagination.dto';
 
 @ApiTags('Admin User Management')
 @ApiBearerAuth()

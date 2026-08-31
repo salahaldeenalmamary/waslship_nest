@@ -14,15 +14,15 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
-import { NotificationsService } from './notifications.service';
-import { CurrentUser } from '../auth/current-user.decorator';
+import { NotificationsService } from '../services/notifications.service';
+import { CurrentUser } from '../../auth/current-user.decorator';
 import {
   RegisterDeviceTokenDto,
   SendPushNotificationDto,
-} from './dtos/notification.dto';
-import { PaginationParamsDto } from '../../common/dtos/pagination.dto';
-import { Roles, RolesGuard } from '../auth/roles.guard';
-import { UserRole } from '../users/enums/user.enum';
+} from '../dtos/notification.dto';
+import { PaginationParamsDto } from '../../../common/dtos/pagination.dto';
+import { Roles, RolesGuard } from '../../auth/roles.guard';
+import { UserRole } from '../../users/enums/user.enum';
 
 @ApiTags('Notifications & FCM Push')
 @ApiBearerAuth()
