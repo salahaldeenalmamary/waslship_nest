@@ -5,6 +5,8 @@ export enum NotificationType {
   WalletDebited = 'WalletDebited',
   BankTransferApproved = 'BankTransferApproved',
   BankTransferRejected = 'BankTransferRejected',
+  WithdrawalApproved = 'WithdrawalApproved',
+  WithdrawalRejected = 'WithdrawalRejected',
   General = 'General',
 }
 

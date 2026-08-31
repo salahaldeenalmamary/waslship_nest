@@ -7,10 +7,12 @@ import {
   WalletCreditedEvent,
   BankTransferCreatedEvent,
   BankTransferReviewedEvent,
+  WithdrawalRequestedEvent,
+  WithdrawalReviewedEvent,
 } from '../../../common/events/domain-events';
 import { NotificationsService } from '../services/notifications.service';
 import { NotificationType } from '../enums/notification.enum';
-import { BankTransferStatus } from '../../wallet/enums/wallet.enum';
+import { BankTransferStatus, WithdrawalStatus } from '../../wallet/enums/wallet.enum';
 
 @Injectable()
 export class NotificationEventsListener {
@@ -113,6 +115,57 @@ export class NotificationEventsListener {
         data: {
           transferId: event.transferId,
           amount: event.amount,
+        },
+      });
+    }
+  }
+
+  @OnEvent(DomainEventNames.WITHDRAWAL_REQUESTED, { async: true })
+  async handleWithdrawalRequested(event: WithdrawalRequestedEvent) {
+    this.logger.log(
+      `Notification handler: Withdrawal requested for merchant ${event.merchantId} (${event.amount} SAR)`,
+    );
+    await this.notificationsService.sendNotification({
+      userId: event.merchantId,
+      title: 'Withdrawal Request Submitted',
+      body: `Your withdrawal request of ${event.amount.toFixed(2)} SAR has been submitted for admin approval.`,
+      type: NotificationType.General,
+      data: {
+        withdrawalId: event.withdrawalId,
+        amount: event.amount,
+      },
+    });
+  }
+
+  @OnEvent(DomainEventNames.WITHDRAWAL_REVIEWED, { async: true })
+  async handleWithdrawalReviewed(event: WithdrawalReviewedEvent) {
+    this.logger.log(
+      `Notification handler: Withdrawal reviewed for merchant ${event.merchantId} (${event.status})`,
+    );
+
+    if (event.status === WithdrawalStatus.Approved) {
+      await this.notificationsService.sendNotification({
+        userId: event.merchantId,
+        title: 'Withdrawal Approved & Transferred',
+        body: `Your withdrawal request for ${event.amount.toFixed(2)} SAR has been approved.${event.proofImageUrl ? ' Transfer proof image is attached.' : ''}`,
+        type: NotificationType.WithdrawalApproved,
+        data: {
+          withdrawalId: event.withdrawalId,
+          amount: event.amount,
+          proofImageUrl: event.proofImageUrl,
+          adminNotes: event.adminNotes,
+        },
+      });
+    } else if (event.status === WithdrawalStatus.Rejected) {
+      await this.notificationsService.sendNotification({
+        userId: event.merchantId,
+        title: 'Withdrawal Request Rejected',
+        body: `Your withdrawal request of ${event.amount.toFixed(2)} SAR was rejected.${event.adminNotes ? ` Reason: ${event.adminNotes}` : ''}`,
+        type: NotificationType.WithdrawalRejected,
+        data: {
+          withdrawalId: event.withdrawalId,
+          amount: event.amount,
+          adminNotes: event.adminNotes,
         },
       });
     }

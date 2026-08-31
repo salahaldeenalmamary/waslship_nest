@@ -4,9 +4,12 @@ import { Wallet } from './entities/wallet.entity';
 import { WalletTransaction } from './entities/transaction.entity';
 import { BankTransferPayment } from './entities/bank-transfer-payment.entity';
 import { BankAccount } from './entities/bank-account.entity';
+import { WithdrawalRequest } from './entities/withdrawal-request.entity';
+import { UserBankAccount } from '../users/entities/user-bank-account.entity';
 import { WalletService } from './services/wallet.service';
 import { BankAccountService } from './services/bank-account.service';
 import { BankTransferPaymentService } from './services/bank-transfer-payment.service';
+import { WithdrawalRequestService } from './services/withdrawal-request.service';
 import { WalletController } from './endpoints/wallet.controller';
 import { AdminWalletController } from './endpoints/admin-wallet.controller';
 import {
@@ -25,6 +28,8 @@ import { StorageModule } from '../storage/storage.module';
       WalletTransaction,
       BankTransferPayment,
       BankAccount,
+      WithdrawalRequest,
+      UserBankAccount,
     ]),
     NotificationsModule,
     forwardRef(() => ShipmentsModule),
@@ -40,8 +45,15 @@ import { StorageModule } from '../storage/storage.module';
     WalletService,
     BankAccountService,
     BankTransferPaymentService,
+    WithdrawalRequestService,
     WalletEventsListener,
   ],
-  exports: [WalletService, BankAccountService, BankTransferPaymentService, TypeOrmModule],
+  exports: [
+    WalletService,
+    BankAccountService,
+    BankTransferPaymentService,
+    WithdrawalRequestService,
+    TypeOrmModule,
+  ],
 })
 export class WalletModule {}

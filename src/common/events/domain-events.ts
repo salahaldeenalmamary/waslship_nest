@@ -1,5 +1,5 @@
 import { PaymentMethod, ShipmentStatus } from '../../modules/shipments/enums/shipment.enum';
-import { BankTransferStatus, TransactionType } from '../../modules/wallet/enums/wallet.enum';
+import { BankTransferStatus, TransactionType, WithdrawalStatus } from '../../modules/wallet/enums/wallet.enum';
 
 export enum DomainEventNames {
   SHIPMENT_CREATED = 'shipment.created',
@@ -13,6 +13,8 @@ export enum DomainEventNames {
   WALLET_RESERVATION_RELEASED = 'wallet.reservation_released',
   BANK_TRANSFER_CREATED = 'wallet.bank_transfer_created',
   BANK_TRANSFER_REVIEWED = 'wallet.bank_transfer_reviewed',
+  WITHDRAWAL_REQUESTED = 'wallet.withdrawal_requested',
+  WITHDRAWAL_REVIEWED = 'wallet.withdrawal_reviewed',
 }
 
 /**
@@ -101,6 +103,33 @@ export class BankTransferReviewedEvent {
     public readonly merchantId: string,
     public readonly amount: number,
     public readonly status: BankTransferStatus,
+    public readonly adminNotes?: string,
+    public readonly reviewedByAdminId?: string,
+  ) {}
+}
+
+/**
+ * Dispatched when a merchant submits a new withdrawal request.
+ */
+export class WithdrawalRequestedEvent {
+  constructor(
+    public readonly withdrawalId: string,
+    public readonly merchantId: string,
+    public readonly amount: number,
+    public readonly userBankAccountId: string,
+  ) {}
+}
+
+/**
+ * Dispatched when an administrator approves or rejects a withdrawal request.
+ */
+export class WithdrawalReviewedEvent {
+  constructor(
+    public readonly withdrawalId: string,
+    public readonly merchantId: string,
+    public readonly amount: number,
+    public readonly status: WithdrawalStatus,
+    public readonly proofImageUrl?: string,
     public readonly adminNotes?: string,
     public readonly reviewedByAdminId?: string,
   ) {}

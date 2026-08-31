@@ -8,7 +8,7 @@ import {
   IsPositive,
   IsString,
 } from 'class-validator';
-import { BankTransferStatus, TransactionType } from '../enums/wallet.enum';
+import { BankTransferStatus, TransactionType, WithdrawalStatus } from '../enums/wallet.enum';
 
 export class InitiateDepositDto {
   @ApiProperty({ example: 200.0 })
@@ -96,3 +96,33 @@ export class ReviewBankTransferDto {
   @IsOptional()
   adminNotes?: string;
 }
+
+export class CreateWithdrawalRequestDto {
+  @ApiProperty({ example: 500.0 })
+  @Type(() => Number)
+  @IsNumber()
+  @IsPositive()
+  amount: number;
+
+  @ApiProperty({ example: 'a1b2c3d4-e5f6-7890-abcd-1234567890ab' })
+  @IsNotEmpty()
+  @IsString()
+  userBankAccountId: string;
+}
+
+export class ReviewWithdrawalRequestDto {
+  @ApiProperty({ enum: WithdrawalStatus })
+  @IsEnum(WithdrawalStatus)
+  status: WithdrawalStatus;
+
+  @ApiPropertyOptional({ example: 'https://storage.waslship.com/proofs/withdrawal-proof-123.jpg' })
+  @IsOptional()
+  @IsString()
+  proofImageUrl?: string;
+
+  @ApiPropertyOptional({ example: 'Withdrawal approved and transferred.' })
+  @IsOptional()
+  @IsString()
+  adminNotes?: string;
+}
+

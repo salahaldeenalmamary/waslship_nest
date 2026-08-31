@@ -4,6 +4,7 @@ export enum TransactionType {
   ShipmentRefund = 'ShipmentRefund',
   CODSettlement = 'CODSettlement',
   BankTransfer = 'BankTransfer',
+  Withdrawal = 'Withdrawal',
   Adjustment = 'Adjustment',
 }
 
@@ -17,6 +18,12 @@ export enum TransactionStatus {
 export enum BankTransferStatus {
   Pending = 'Pending',
   Processing = 'Processing',
+  Approved = 'Approved',
+  Rejected = 'Rejected',
+}
+
+export enum WithdrawalStatus {
+  Pending = 'Pending',
   Approved = 'Approved',
   Rejected = 'Rejected',
 }

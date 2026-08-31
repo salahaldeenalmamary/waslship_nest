@@ -25,12 +25,14 @@ import { AuthGuard } from '@nestjs/passport';
 import { Request } from 'express';
 import { WalletService } from '../services/wallet.service';
 import { BankTransferPaymentService } from '../services/bank-transfer-payment.service';
+import { WithdrawalRequestService } from '../services/withdrawal-request.service';
 import { StorageService } from '../../storage/services/storage.service';
 import { CurrentUser } from '../../auth/current-user.decorator';
 import { TransactionType } from '../enums/wallet.enum';
 import {
   InitiateDepositDto,
   CreateBankTransferPaymentDto,
+  CreateWithdrawalRequestDto,
 } from '../dtos/wallet.dto';
 import { PaginationParamsDto } from '../../../common/dtos/pagination.dto';
 
@@ -42,6 +44,7 @@ export class WalletController {
   constructor(
     private readonly walletService: WalletService,
     private readonly bankTransferPaymentService: BankTransferPaymentService,
+    private readonly withdrawalRequestService: WithdrawalRequestService,
     private readonly storageService: StorageService,
   ) {}
 
@@ -203,5 +206,30 @@ export class WalletController {
   @ApiOperation({ summary: 'List merchant submitted bank transfers' })
   async getMyBankTransfers(@CurrentUser('id') merchantId: string) {
     return this.bankTransferPaymentService.getMerchantBankTransfers(merchantId);
+  }
+
+  // --- Withdrawal Requests ---
+  @Post('withdrawals')
+  @ApiOperation({ summary: 'Submit a new withdrawal request to transfer wallet funds to bank account' })
+  async createWithdrawalRequest(
+    @CurrentUser('id') merchantId: string,
+    @Body() dto: CreateWithdrawalRequestDto,
+  ) {
+    return this.withdrawalRequestService.createWithdrawalRequest(merchantId, dto);
+  }
+
+  @Get('withdrawals')
+  @ApiOperation({ summary: 'List merchant withdrawal request history' })
+  async getMyWithdrawalRequests(@CurrentUser('id') merchantId: string) {
+    return this.withdrawalRequestService.getMerchantWithdrawalRequests(merchantId);
+  }
+
+  @Get('withdrawals/:id')
+  @ApiOperation({ summary: 'Get details of a specific withdrawal request' })
+  async getWithdrawalRequestById(
+    @CurrentUser('id') merchantId: string,
+    @Param('id') id: string,
+  ) {
+    return this.withdrawalRequestService.getWithdrawalRequestById(id, merchantId);
   }
 }
