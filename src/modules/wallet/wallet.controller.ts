@@ -88,17 +88,14 @@ export class WalletController {
       type: 'object',
       properties: {
         amount: { type: 'number', example: 1000.0 },
-        bankName: { type: 'string', example: 'Al Rajhi Bank' },
-        accountHolderName: { type: 'string', example: 'Wasl Logistics Store LLC' },
-        accountNumber: { type: 'string', example: '12345678901234' },
-        iban: { type: 'string', example: 'SA0380000000608010167519' },
+        bankAccountId: { type: 'string', example: 'a1b2c3d4-e5f6-7890-abcd-1234567890ab' },
         receiptFile: {
           type: 'string',
           format: 'binary',
           description: 'Receipt image or document (JPEG, PNG, PDF max 10MB)',
         },
       },
-      required: ['amount', 'bankName', 'accountHolderName', 'accountNumber', 'receiptFile'],
+      required: ['amount', 'bankAccountId', 'receiptFile'],
     },
   })
   @UseInterceptors(FileInterceptor('receiptFile'))

@@ -4,8 +4,11 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Column,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { BankTransferStatus } from '../enums/wallet.enum';
+import { BankAccount } from './bank-account.entity';
 
 @Entity('bank_transfer_payments')
 export class BankTransferPayment {
@@ -27,17 +30,15 @@ export class BankTransferPayment {
   @Column({ type: 'float' })
   amount: number;
 
-  @Column()
-  bankName: string;
-
-  @Column()
-  accountHolderName: string;
-
-  @Column()
-  accountNumber: string;
-
   @Column({ nullable: true })
-  iban: string;
+  bankAccountId: string;
+
+  @ManyToOne(() => BankAccount, (bankAccount) => bankAccount.payments, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
+  @JoinColumn({ name: 'bankAccountId' })
+  bankAccount: BankAccount;
 
   @Column({ nullable: true })
   receiptUrl: string;

@@ -10,6 +10,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Wallet } from './entities/wallet.entity';
 import { WalletTransaction } from './entities/transaction.entity';
 import { BankTransferPayment } from './entities/bank-transfer-payment.entity';
+import { BankAccount } from './entities/bank-account.entity';
 import {
   BankTransferStatus,
   TransactionStatus,
@@ -19,6 +20,8 @@ import {
   InitiateDepositDto,
   CreateBankTransferPaymentDto,
   ReviewBankTransferDto,
+  CreateBankAccountDto,
+  UpdateBankAccountDto,
 } from './dtos/wallet.dto';
 import { PaginationParamsDto, PagedResult } from '../../common/dtos/pagination.dto';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -40,6 +43,8 @@ export class WalletService {
     private readonly transactionRepository: Repository<WalletTransaction>,
     @InjectRepository(BankTransferPayment)
     private readonly bankTransferRepository: Repository<BankTransferPayment>,
+    @InjectRepository(BankAccount)
+    private readonly bankAccountRepository: Repository<BankAccount>,
     private readonly notificationsService: NotificationsService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -210,13 +215,60 @@ export class WalletService {
     };
   }
 
+  // Bank Account Management
+  async createBankAccount(dto: CreateBankAccountDto): Promise<BankAccount> {
+    const bankAccount = this.bankAccountRepository.create(dto);
+    return this.bankAccountRepository.save(bankAccount);
+  }
+
+  async getBankAccounts(onlyActive = false): Promise<BankAccount[]> {
+    const where: any = { isDeleted: false };
+    if (onlyActive) {
+      where.isActive = true;
+    }
+    return this.bankAccountRepository.find({
+      where,
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async getBankAccountById(id: string): Promise<BankAccount> {
+    const bankAccount = await this.bankAccountRepository.findOne({
+      where: { id, isDeleted: false },
+    });
+    if (!bankAccount) {
+      throw new NotFoundException(`Bank account with ID "${id}" not found`);
+    }
+    return bankAccount;
+  }
+
+  async updateBankAccount(id: string, dto: UpdateBankAccountDto): Promise<BankAccount> {
+    const bankAccount = await this.getBankAccountById(id);
+    Object.assign(bankAccount, dto);
+    return this.bankAccountRepository.save(bankAccount);
+  }
+
+  async deleteBankAccount(id: string): Promise<void> {
+    const bankAccount = await this.getBankAccountById(id);
+    bankAccount.isDeleted = true;
+    await this.bankAccountRepository.save(bankAccount);
+  }
+
   // Bank Transfer Workflow
   async createBankTransfer(
     merchantId: string,
     dto: CreateBankTransferPaymentDto,
   ) {
+    const bankAccount = await this.getBankAccountById(dto.bankAccountId);
+    if (!bankAccount.isActive) {
+      throw new BadRequestException(`Bank account "${bankAccount.bankName}" is currently inactive`);
+    }
+
     const payment = this.bankTransferRepository.create({
-      ...dto,
+      amount: dto.amount,
+      bankAccountId: dto.bankAccountId,
+      bankAccount,
+      receiptUrl: dto.receiptUrl,
       merchantId,
       status: BankTransferStatus.Pending,
     });
@@ -229,8 +281,9 @@ export class WalletService {
         saved.id,
         merchantId,
         saved.amount,
-        saved.bankName,
-        saved.accountNumber,
+        saved.bankAccountId,
+        bankAccount.bankName,
+        bankAccount.accountNumber,
         saved.receiptUrl,
       ),
     );
@@ -241,6 +294,7 @@ export class WalletService {
   async getMerchantBankTransfers(merchantId: string) {
     return this.bankTransferRepository.find({
       where: { merchantId, isDeleted: false },
+      relations: ['bankAccount'],
       order: { createdAt: 'DESC' },
     });
   }
@@ -250,7 +304,10 @@ export class WalletService {
     if (merchantId) {
       where.merchantId = merchantId;
     }
-    const transfer = await this.bankTransferRepository.findOne({ where });
+    const transfer = await this.bankTransferRepository.findOne({
+      where,
+      relations: ['bankAccount'],
+    });
     if (!transfer) {
       throw new NotFoundException(`Bank transfer with ID "${transferId}" not found`);
     }
@@ -270,6 +327,7 @@ export class WalletService {
   ) {
     const query = this.bankTransferRepository
       .createQueryBuilder('bt')
+      .leftJoinAndSelect('bt.bankAccount', 'bankAccount')
       .where('bt.isDeleted = :isDeleted', { isDeleted: false });
 
     if (status) {
@@ -292,6 +350,7 @@ export class WalletService {
   ) {
     const transfer = await this.bankTransferRepository.findOne({
       where: { id: transferId, isDeleted: false },
+      relations: ['bankAccount'],
     });
     if (!transfer) throw new NotFoundException('Bank transfer not found');
 
@@ -309,7 +368,8 @@ export class WalletService {
       wallet.balance += transfer.amount;
       await this.walletRepository.save(wallet);
 
-      const description = `Bank Transfer Top-up (${transfer.bankName}) Approved by Admin`;
+      const bankName = transfer.bankAccount?.bankName || 'Bank';
+      const description = `Bank Transfer Top-up (${bankName}) Approved by Admin`;
       const tx = this.transactionRepository.create({
         walletId: wallet.id,
         merchantId: transfer.merchantId,

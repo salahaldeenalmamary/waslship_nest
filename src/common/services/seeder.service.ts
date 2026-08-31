@@ -6,6 +6,7 @@ import { User } from '../../modules/users/entities/user.entity';
 import { UserRole } from '../../modules/users/enums/user.enum';
 import { Location } from '../../modules/users/entities/location.entity';
 import { Wallet } from '../../modules/wallet/entities/wallet.entity';
+import { BankAccount } from '../../modules/wallet/entities/bank-account.entity';
 
 @Injectable()
 export class DatabaseSeederService implements OnApplicationBootstrap {
@@ -18,11 +19,14 @@ export class DatabaseSeederService implements OnApplicationBootstrap {
     private readonly locationRepository: Repository<Location>,
     @InjectRepository(Wallet)
     private readonly walletRepository: Repository<Wallet>,
+    @InjectRepository(BankAccount)
+    private readonly bankAccountRepository: Repository<BankAccount>,
   ) {}
 
   async onApplicationBootstrap() {
     await this.seedLocations();
     await this.seedAdminAndDemoMerchant();
+    await this.seedBankAccounts();
   }
 
   private async seedLocations() {
@@ -98,5 +102,32 @@ export class DatabaseSeederService implements OnApplicationBootstrap {
       await this.walletRepository.save(wallet);
       this.logger.log('Seeded Merchant account: merchant@waslship.com / Merchant123! with 1500 SAR wallet.');
     }
+  }
+
+  private async seedBankAccounts() {
+    const count = await this.bankAccountRepository.count();
+    if (count > 0) return;
+
+    const initialAccounts = [
+      {
+        bankName: 'Al Rajhi Bank',
+        accountHolderName: 'Wasl Logistics Ltd',
+        accountNumber: '12345678901234',
+        iban: 'SA0380000000608010167519',
+        isActive: true,
+      },
+      {
+        bankName: 'Saudi National Bank (SNB)',
+        accountHolderName: 'Wasl Logistics Ltd',
+        accountNumber: '98765432109876',
+        iban: 'SA1010000000123456789012',
+        isActive: true,
+      },
+    ];
+
+    for (const acc of initialAccounts) {
+      await this.bankAccountRepository.save(this.bankAccountRepository.create(acc));
+    }
+    this.logger.log('Seeded official company bank accounts.');
   }
 }

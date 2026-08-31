@@ -85,8 +85,9 @@ export class BankTransferCreatedEvent {
     public readonly transferId: string,
     public readonly merchantId: string,
     public readonly amount: number,
-    public readonly bankName: string,
-    public readonly accountNumber: string,
+    public readonly bankAccountId: string,
+    public readonly bankName?: string,
+    public readonly accountNumber?: string,
     public readonly receiptUrl?: string,
   ) {}
 }

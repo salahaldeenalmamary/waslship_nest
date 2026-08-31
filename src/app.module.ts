@@ -13,6 +13,7 @@ import { OtoWebhookLog } from './modules/shipments/entities/oto-webhook-log.enti
 import { Wallet } from './modules/wallet/entities/wallet.entity';
 import { WalletTransaction } from './modules/wallet/entities/transaction.entity';
 import { BankTransferPayment } from './modules/wallet/entities/bank-transfer-payment.entity';
+import { BankAccount } from './modules/wallet/entities/bank-account.entity';
 import { NotificationEntity } from './modules/notifications/entities/notification.entity';
 import { DeviceToken } from './modules/notifications/entities/device-token.entity';
 import { MediaAttachment } from './modules/storage/entities/media-attachment.entity';
@@ -113,6 +114,7 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
                   Wallet,
                   WalletTransaction,
                   BankTransferPayment,
+                  BankAccount,
                   NotificationEntity,
                   DeviceToken,
                   MediaAttachment,
@@ -139,6 +141,7 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
                 Wallet,
                 WalletTransaction,
                 BankTransferPayment,
+                BankAccount,
                 NotificationEntity,
                 DeviceToken,
                 MediaAttachment,
@@ -166,6 +169,7 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
             Wallet,
             WalletTransaction,
             BankTransferPayment,
+            BankAccount,
             NotificationEntity,
             DeviceToken,
             MediaAttachment,
