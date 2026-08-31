@@ -7,6 +7,7 @@ import * as net from 'net';
 // Entities
 import { User } from './modules/users/entities/user.entity';
 import { UserAddress } from './modules/users/entities/user-address.entity';
+import { UserBankAccount } from './modules/users/entities/user-bank-account.entity';
 import { Location } from './modules/users/entities/location.entity';
 import { Shipment } from './modules/shipments/entities/shipment.entity';
 import { OtoWebhookLog } from './modules/shipments/entities/oto-webhook-log.entity';
@@ -108,6 +109,7 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
                 entities: [
                   User,
                   UserAddress,
+                  UserBankAccount,
                   Location,
                   Shipment,
                   OtoWebhookLog,
@@ -135,6 +137,7 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
               entities: [
                 User,
                 UserAddress,
+                UserBankAccount,
                 Location,
                 Shipment,
                 OtoWebhookLog,
@@ -163,6 +166,7 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
           entities: [
             User,
             UserAddress,
+            UserBankAccount,
             Location,
             Shipment,
             OtoWebhookLog,

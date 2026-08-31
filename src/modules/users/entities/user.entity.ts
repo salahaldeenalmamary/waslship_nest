@@ -4,7 +4,10 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Column,
+  OneToMany,
 } from 'typeorm';
+import { UserAddress } from './user-address.entity';
+import { UserBankAccount } from './user-bank-account.entity';
 
 @Entity('users')
 export class User {
@@ -52,4 +55,10 @@ export class User {
 
   @Column({ nullable: true })
   otpExpiryTime: Date;
+
+  @OneToMany(() => UserAddress, (address) => address.user)
+  addresses: UserAddress[];
+
+  @OneToMany(() => UserBankAccount, (bankAccount) => bankAccount.user)
+  bankAccounts: UserBankAccount[];
 }
