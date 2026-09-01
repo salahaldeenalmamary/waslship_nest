@@ -24,6 +24,7 @@ import {
   UpdateShipmentStatusDto,
   CreateOtoShipmentDto,
   SelectDeliveryOptionDto,
+  PrepareOtoPayloadDto,
 } from '../dtos/shipment.dto';
 import { PaginationParamsDto } from '../../../common/dtos/pagination.dto';
 
@@ -33,6 +34,19 @@ import { PaginationParamsDto } from '../../../common/dtos/pagination.dto';
 @Controller('api/shipments')
 export class ShipmentsController {
   constructor(private readonly shipmentsService: ShipmentsService) {}
+
+  @Post('oto/prepare-payload')
+  @ApiOperation({
+    summary:
+      'Helper: Fetch and validate UserAddress details based on pickupAddressId and deliveryAddressId to prepare OTO createShipment payload',
+  })
+  async prepareOtoPayload(@Body() dto: PrepareOtoPayloadDto) {
+    return this.shipmentsService.prepareOtoCreateShipmentPayload(
+      dto.pickupAddressId,
+      dto.deliveryAddressId,
+      dto,
+    );
+  }
 
   @Post()
   @ApiOperation({

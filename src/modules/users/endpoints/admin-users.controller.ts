@@ -21,6 +21,7 @@ import { UserRole } from '../enums/user.enum';
 import {
   UpdateUserStatusDto,
   CreateAdminDto,
+  CreateUserAddressDto,
 } from '../dtos/user.dto';
 import { PaginationParamsDto } from '../../../common/dtos/pagination.dto';
 
@@ -40,6 +41,21 @@ export class AdminUsersController {
     @Query('role') role?: UserRole,
   ) {
     return this.usersService.getAllUsers(pagination, role);
+  }
+
+  @Get(':id/addresses')
+  @ApiOperation({ summary: 'Get all saved addresses for a specific user/merchant (Admin)' })
+  async getUserAddresses(@Param('id') userId: string) {
+    return this.usersService.getUserAddresses(userId);
+  }
+
+  @Post(':id/addresses')
+  @ApiOperation({ summary: 'Add a new address for a specific user/merchant (Admin)' })
+  async createUserAddress(
+    @Param('id') userId: string,
+    @Body() dto: CreateUserAddressDto,
+  ) {
+    return this.usersService.createAddress(userId, dto);
   }
 
   @Put(':id/status')

@@ -4,8 +4,11 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Column,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { PaymentMethod, ShipmentStatus } from '../enums/shipment.enum';
+import { UserAddress } from '../../users/entities/user-address.entity';
 
 @Entity('shipments')
 export class Shipment {
@@ -56,37 +59,20 @@ export class Shipment {
   @Column({ default: 'SAR' })
   currency: string;
 
-  // Sender details
-  @Column()
-  senderName: string;
-
-  @Column()
-  senderPhone: string;
-
-  @Column()
-  senderCity: string;
-
-  @Column()
-  senderAddress: string;
-
+  // Addresses referenced from UserAddress table
   @Column({ nullable: true })
   pickupAddressId: string;
 
-  // Recipient details
-  @Column()
-  recipientName: string;
-
-  @Column()
-  recipientPhone: string;
-
-  @Column()
-  recipientCity: string;
-
-  @Column()
-  recipientAddress: string;
+  @ManyToOne(() => UserAddress, { eager: true, nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'pickupAddressId' })
+  pickupAddress: UserAddress;
 
   @Column({ nullable: true })
   deliveryAddressId: string;
+
+  @ManyToOne(() => UserAddress, { eager: true, nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'deliveryAddressId' })
+  deliveryAddress: UserAddress;
 
   // Package specs
   @Column({ type: 'float', default: 1 })
@@ -112,4 +98,17 @@ export class Shipment {
 
   @Column({ nullable: true })
   deliveredAt: Date;
+
+  // Admin audit tracking fields
+  @Column({ nullable: true })
+  createdByAdminId: string;
+
+  @Column({ nullable: true })
+  createdByAdminName: string;
+
+  @Column({ nullable: true })
+  lastModifiedByAdminId: string;
+
+  @Column({ nullable: true })
+  lastModifiedByAdminName: string;
 }

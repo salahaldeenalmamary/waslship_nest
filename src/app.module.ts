@@ -191,7 +191,7 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
       },
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([User, Location, Wallet]),
+    TypeOrmModule.forFeature([User, Location, Wallet, UserAddress, BankAccount]),
     AuthModule,
     UsersModule,
     ShipmentsModule,

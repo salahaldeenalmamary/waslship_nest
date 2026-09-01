@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../../modules/users/entities/user.entity';
 import { UserRole } from '../../modules/users/enums/user.enum';
+import { UserAddress } from '../../modules/users/entities/user-address.entity';
+import { AddressType } from '../../modules/users/enums/user.enum';
 import { Location } from '../../modules/users/entities/location.entity';
 import { Wallet } from '../../modules/wallet/entities/wallet.entity';
 import { BankAccount } from '../../modules/wallet/entities/bank-account.entity';
@@ -15,6 +17,8 @@ export class DatabaseSeederService implements OnApplicationBootstrap {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(UserAddress)
+    private readonly addressRepository: Repository<UserAddress>,
     @InjectRepository(Location)
     private readonly locationRepository: Repository<Location>,
     @InjectRepository(Wallet)
@@ -100,7 +104,44 @@ export class DatabaseSeederService implements OnApplicationBootstrap {
         currency: 'SAR',
       });
       await this.walletRepository.save(wallet);
-      this.logger.log('Seeded Merchant account: merchant@waslship.com / Merchant123! with 1500 SAR wallet.');
+
+      // Seed pickup address (Warehouse)
+      const pickupAddress = this.addressRepository.create({
+        userId: savedMerchant.id,
+        type: AddressType.Pickup,
+        title: 'Central Riyadh Warehouse (Pickup)',
+        contactName: 'Ahmed Al-Shehri (Warehouse Manager)',
+        contactPhone: '+966500000001',
+        country: 'Saudi Arabia',
+        city: 'Riyadh',
+        district: 'Al Sulimaniyah',
+        street: 'King Fahd Road',
+        buildingNumber: '12',
+        postalCode: '12211',
+        isDefault: true,
+      });
+      await this.addressRepository.save(pickupAddress);
+
+      // Seed delivery address (Customer Destination)
+      const deliveryAddress = this.addressRepository.create({
+        userId: savedMerchant.id,
+        type: AddressType.Delivery,
+        title: 'Jeddah Coastal Villa (Customer Destination)',
+        contactName: 'Khalid Al-Ghamdi',
+        contactPhone: '+966555555555',
+        country: 'Saudi Arabia',
+        city: 'Jeddah',
+        district: 'Al Andalus',
+        street: 'Prince Sultan Street',
+        buildingNumber: '45',
+        postalCode: '23326',
+        isDefault: true,
+      });
+      await this.addressRepository.save(deliveryAddress);
+
+      this.logger.log(
+        'Seeded Merchant account with 1500 SAR wallet and default pickup/delivery UserAddresses.',
+      );
     }
   }
 
