@@ -15,12 +15,13 @@ import {
   BulkCreateOrderDto,
   UpdateShipmentStatusDto,
   DeliveryFeeCheckDto,
+  UpdateCarrierDetailsDto,
+  BulkUpdateShipmentStatusDto,
 } from '../dtos/shipment.dto';
 import { OtoClient } from './oto.client';
 import { PaginationParamsDto, PagedResult } from '../../../common/dtos/pagination.dto';
 import { WalletService } from '../../wallet/services/wallet.service';
 import { NotificationsService } from '../../notifications/services/notifications.service';
-import { NotificationType } from '../../notifications/enums/notification.enum';
 import {
   DomainEventNames,
   ShipmentCreatedEvent,
@@ -279,6 +280,93 @@ export class ShipmentsService {
     );
   }
 
+  /**
+   * Step 2: Query available delivery companies & fee options for an order created in Step 1
+   */
+  async getDeliveryFeeForOrder(orderId: string) {
+    const shipment = await this.shipmentRepository.findOne({
+      where: [{ id: orderId }, { otoOrderId: orderId }],
+    });
+    const effectiveOrderId = shipment?.otoOrderId || orderId;
+    return this.otoClient.getDeliveryFeeAsync(effectiveOrderId);
+  }
+
+  /**
+   * Step 3: Complete shipment on OTO with selected deliveryOptionId
+   */
+  async createOtoShipment(orderId: string, deliveryOptionId?: string | number) {
+    const shipment = await this.shipmentRepository.findOne({
+      where: [{ id: orderId }, { otoOrderId: orderId }],
+    });
+    const effectiveOrderId = shipment?.otoOrderId || orderId;
+
+    const result = await this.otoClient.createShipment({
+      orderId: effectiveOrderId,
+      deliveryOptionId,
+    });
+
+    // If matching internal shipment exists, update its carrier details & status
+    if (shipment && result && result.success !== false) {
+      if (result.otoId) shipment.otoOrderId = result.otoId;
+      if (result.deliveryCompanyName || result.deliveryCompany) {
+        shipment.carrierName =
+          result.deliveryCompanyName || result.deliveryCompany;
+      }
+      if (result.trackingUrl) shipment.carrierTrackingUrl = result.trackingUrl;
+      if (result.deliveryFee) shipment.otoDeliveryFee = result.deliveryFee;
+      if (result.trackingNumber) shipment.trackingNumber = result.trackingNumber;
+      if (shipment.status === ShipmentStatus.Created) {
+        shipment.status = ShipmentStatus.ReadyForPickup;
+      }
+      await this.shipmentRepository.save(shipment);
+    }
+
+    return {
+      isSuccess: result.success !== false,
+      otoResponse: result,
+      shipment: shipment || undefined,
+    };
+  }
+
+  /**
+   * Merchant helper: Select deliveryOptionId and complete Step 3 for a specific shipment
+   */
+  async selectDeliveryOptionForShipment(
+    shipmentId: string,
+    merchantId: string,
+    deliveryOptionId: string | number,
+  ) {
+    const shipment = await this.getShipmentDetails(shipmentId, merchantId);
+    const effectiveOrderId = shipment.otoOrderId || shipment.id;
+
+    const result = await this.otoClient.createShipment({
+      orderId: effectiveOrderId,
+      deliveryOptionId,
+    });
+
+    if (result && result.success !== false) {
+      if (result.otoId) shipment.otoOrderId = result.otoId;
+      if (result.deliveryCompanyName || result.deliveryCompany) {
+        shipment.carrierName =
+          result.deliveryCompanyName || result.deliveryCompany;
+      }
+      if (result.trackingUrl) shipment.carrierTrackingUrl = result.trackingUrl;
+      if (result.deliveryFee) shipment.otoDeliveryFee = result.deliveryFee;
+      if (result.trackingNumber) shipment.trackingNumber = result.trackingNumber;
+      if (shipment.status === ShipmentStatus.Created) {
+        shipment.status = ShipmentStatus.ReadyForPickup;
+      }
+      await this.shipmentRepository.save(shipment);
+    }
+
+    return {
+      isSuccess: result.success !== false,
+      message: 'Shipment booking finalized with selected delivery option.',
+      otoResponse: result,
+      shipment,
+    };
+  }
+
   // Dashboard Metrics
   async getDashboardOverview(merchantId?: string) {
     const query = this.shipmentRepository.createQueryBuilder('s').where('s.isDeleted = false');
@@ -379,6 +467,113 @@ export class ShipmentsService {
       take: pagination.pageSize,
     });
     return new PagedResult(items, total, pagination.pageNumber, pagination.pageSize);
+  }
+
+  // --- Additional Admin Shipment Operations ---
+  async updateCarrierDetailsAdmin(shipmentId: string, dto: UpdateCarrierDetailsDto) {
+    const shipment = await this.getShipmentDetails(shipmentId);
+    if (dto.carrierName !== undefined) shipment.carrierName = dto.carrierName;
+    if (dto.carrierTrackingUrl !== undefined) shipment.carrierTrackingUrl = dto.carrierTrackingUrl;
+    if (dto.otoOrderId !== undefined) shipment.otoOrderId = dto.otoOrderId;
+    if (dto.otoDeliveryFee !== undefined) shipment.otoDeliveryFee = dto.otoDeliveryFee;
+    return this.shipmentRepository.save(shipment);
+  }
+
+  async bulkUpdateShipmentStatusAdmin(dto: BulkUpdateShipmentStatusDto) {
+    const updatedShipments = [];
+    const errors = [];
+
+    for (const shipmentId of dto.shipmentIds) {
+      try {
+        const updated = await this.updateShipmentStatus(shipmentId, {
+          status: dto.status,
+          notes: dto.notes || 'Bulk status update by administrator',
+        });
+        updatedShipments.push(updated);
+      } catch (err: any) {
+        errors.push({ shipmentId, error: err.message });
+      }
+    }
+
+    return {
+      total: dto.shipmentIds.length,
+      successfulCount: updatedShipments.length,
+      failedCount: errors.length,
+      errors,
+      updatedShipments,
+    };
+  }
+
+  async syncOtoOrderAdmin(shipmentId: string) {
+    const shipment = await this.getShipmentDetails(shipmentId);
+    const otoRes = await this.otoClient.createOtoOrder(shipment);
+
+    if (otoRes && otoRes.otoOrderId) {
+      shipment.otoOrderId = otoRes.otoOrderId;
+      shipment.carrierName = otoRes.carrierName;
+      shipment.carrierTrackingUrl = otoRes.trackingUrl;
+      shipment.otoDeliveryFee = otoRes.deliveryFee;
+      await this.shipmentRepository.save(shipment);
+    }
+
+    return {
+      message: 'Shipment synced with OTO Gateway successfully',
+      shipment,
+      otoResponse: otoRes,
+    };
+  }
+
+  async getShipmentAnalyticsAdmin() {
+    const query = this.shipmentRepository.createQueryBuilder('s').where('s.isDeleted = false');
+
+    const totalCount = await query.getCount();
+
+    const statusCountsRaw = await query
+      .select('s.status', 'status')
+      .addSelect('COUNT(s.id)', 'count')
+      .groupBy('s.status')
+      .getRawMany();
+
+    const carrierCountsRaw = await query
+      .select('s.carrierName', 'carrierName')
+      .addSelect('COUNT(s.id)', 'count')
+      .groupBy('s.carrierName')
+      .getRawMany();
+
+    const paymentMethodCountsRaw = await query
+      .select('s.paymentMethod', 'paymentMethod')
+      .addSelect('COUNT(s.id)', 'count')
+      .groupBy('s.paymentMethod')
+      .getRawMany();
+
+    const financialTotals = await query
+      .select('SUM(s.shippingCost)', 'totalShippingCost')
+      .addSelect('SUM(s.codAmount)', 'totalCodAmount')
+      .addSelect('SUM(s.otoDeliveryFee)', 'totalOtoDeliveryFee')
+      .getRawOne();
+
+    return {
+      totalShipments: totalCount,
+      statusBreakdown: statusCountsRaw.reduce((acc, curr) => {
+        acc[curr.status] = parseInt(curr.count, 10);
+        return acc;
+      }, {}),
+      carrierBreakdown: carrierCountsRaw.reduce((acc, curr) => {
+        const key = curr.carrierName || 'Unassigned';
+        acc[key] = parseInt(curr.count, 10);
+        return acc;
+      }, {}),
+      paymentMethodBreakdown: paymentMethodCountsRaw.reduce((acc, curr) => {
+        acc[curr.paymentMethod] = parseInt(curr.count, 10);
+        return acc;
+      }, {}),
+      financials: {
+        totalShippingCost: parseFloat(financialTotals?.totalShippingCost || '0'),
+        totalCodAmount: parseFloat(financialTotals?.totalCodAmount || '0'),
+        totalOtoDeliveryFee: parseFloat(financialTotals?.totalOtoDeliveryFee || '0'),
+        currency: 'SAR',
+      },
+    };
   }
 
   private generateTrackingNumber(): string {

@@ -15,6 +15,7 @@ import { Wallet } from './modules/wallet/entities/wallet.entity';
 import { WalletTransaction } from './modules/wallet/entities/transaction.entity';
 import { BankTransferPayment } from './modules/wallet/entities/bank-transfer-payment.entity';
 import { BankAccount } from './modules/wallet/entities/bank-account.entity';
+import { WithdrawalRequest } from './modules/wallet/entities/withdrawal-request.entity';
 import { NotificationEntity } from './modules/notifications/entities/notification.entity';
 import { DeviceToken } from './modules/notifications/entities/device-token.entity';
 import { MediaAttachment } from './modules/storage/entities/media-attachment.entity';
@@ -106,6 +107,7 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
               return {
                 type: 'postgres',
                 url: databaseUrl,
+                autoLoadEntities: true,
                 entities: [
                   User,
                   UserAddress,
@@ -117,6 +119,7 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
                   WalletTransaction,
                   BankTransferPayment,
                   BankAccount,
+                  WithdrawalRequest,
                   NotificationEntity,
                   DeviceToken,
                   MediaAttachment,
@@ -134,6 +137,7 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
               username: config.get<string>('DB_USERNAME', 'postgres'),
               password: config.get<string>('DB_PASSWORD', 'postgres123'),
               database: config.get<string>('DB_DATABASE', 'waslship_db'),
+              autoLoadEntities: true,
               entities: [
                 User,
                 UserAddress,
@@ -145,6 +149,7 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
                 WalletTransaction,
                 BankTransferPayment,
                 BankAccount,
+                WithdrawalRequest,
                 NotificationEntity,
                 DeviceToken,
                 MediaAttachment,
@@ -163,6 +168,7 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
         return {
           type: 'sqlite',
           database: config.get<string>('DB_DATABASE', 'waslship.db'),
+          autoLoadEntities: true,
           entities: [
             User,
             UserAddress,
@@ -174,6 +180,7 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
             WalletTransaction,
             BankTransferPayment,
             BankAccount,
+            WithdrawalRequest,
             NotificationEntity,
             DeviceToken,
             MediaAttachment,

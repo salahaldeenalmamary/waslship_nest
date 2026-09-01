@@ -7,7 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Request } from 'express';
-import { existsSync, unlinkSync, mkdirSync, writeFileSync } from 'fs';
+import { existsSync, unlinkSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { extname, join } from 'path';
 import * as Minio from 'minio';
 import { MediaAttachment } from '../entities/media-attachment.entity';
@@ -111,7 +111,7 @@ export class StorageService {
     const bucket = process.env.MINIO_BUCKET || 'waslship-media';
 
     let fileUrl: string;
-    let filePath: string = file.path || '';
+    let filePath: string;
 
     if (minio) {
       // --- MinIO Native Object Storage Upload ---
@@ -120,7 +120,7 @@ export class StorageService {
       const objectKey = options?.tag ? `${options.tag}/${filename}` : `uploads/${filename}`;
       const fileBuffer =
         file.buffer ||
-        (file.path && existsSync(file.path) ? require('fs').readFileSync(file.path) : null);
+        (file.path && existsSync(file.path) ? readFileSync(file.path) : null);
 
       if (!fileBuffer) {
         throw new BadRequestException('File buffer is required for MinIO upload');

@@ -41,7 +41,7 @@ export class UsersService {
       order: { isDefault: 'DESC', createdAt: 'DESC' },
     });
 
-    const { passwordHash, otpCode, ...safeUser } = user;
+    const { passwordHash: _passwordHash, otpCode: _otpCode, ...safeUser } = user;
     return { ...safeUser, addresses };
   }
 
@@ -170,7 +170,7 @@ export class UsersService {
 
     const [items, total] = await query.getManyAndCount();
     const sanitized = items.map((u) => {
-      const { passwordHash, otpCode, ...safe } = u;
+      const { passwordHash: _passwordHash, otpCode: _otpCode, ...safe } = u;
       return safe;
     });
 
@@ -212,7 +212,7 @@ export class UsersService {
     });
 
     const saved = await this.userRepository.save(admin);
-    const { passwordHash: _, ...safe } = saved;
+    const { passwordHash: _passwordHash, ...safe } = saved;
     return safe;
   }
 

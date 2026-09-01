@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  IsDecimal,
   IsEnum,
   IsNotEmpty,
   IsNumber,
@@ -120,3 +119,73 @@ export class DeliveryFeeCheckDto {
   @IsNumber()
   codAmount?: number = 0;
 }
+
+export class UpdateCarrierDetailsDto {
+  @ApiPropertyOptional({ example: 'SMSA Express' })
+  @IsOptional()
+  @IsString()
+  carrierName?: string;
+
+  @ApiPropertyOptional({ example: 'https://smsaexpress.com/track/123456' })
+  @IsOptional()
+  @IsString()
+  carrierTrackingUrl?: string;
+
+  @ApiPropertyOptional({ example: 'OTO-99281' })
+  @IsOptional()
+  @IsString()
+  otoOrderId?: string;
+
+  @ApiPropertyOptional({ example: 25.5 })
+  @IsOptional()
+  @IsNumber()
+  otoDeliveryFee?: number;
+}
+
+export class AdminCancelShipmentDto {
+  @ApiProperty({ example: 'Address out of delivery zone' })
+  @IsNotEmpty()
+  @IsString()
+  reason: string;
+}
+
+export class BulkUpdateShipmentStatusDto {
+  @ApiProperty({ example: ['uuid1', 'uuid2'] })
+  @IsNotEmpty()
+  shipmentIds: string[];
+
+  @ApiProperty({ enum: ShipmentStatus })
+  @IsEnum(ShipmentStatus)
+  status: ShipmentStatus;
+
+  @ApiPropertyOptional({ example: 'Bulk status update by admin' })
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
+export class CreateOtoShipmentDto {
+  @ApiProperty({ example: 'ORD-100234', description: 'OTO Order ID or internal Shipment ID' })
+  @IsNotEmpty()
+  @IsString()
+  orderId: string;
+
+  @ApiPropertyOptional({ example: '101', description: 'Selected delivery option ID from getDeliveryFee' })
+  @IsOptional()
+  deliveryOptionId?: string | number;
+}
+
+export class SelectDeliveryOptionDto {
+  @ApiProperty({ example: '101', description: 'Selected delivery option ID from OTO getDeliveryFee response' })
+  @IsNotEmpty()
+  deliveryOptionId: string | number;
+}
+
+export class GetOtoDeliveryFeeDto {
+  @ApiProperty({ example: 'ORD-100234', description: 'OTO Order ID or internal Shipment ID' })
+  @IsNotEmpty()
+  @IsString()
+  orderId: string;
+}
+
+

@@ -10,12 +10,30 @@ import { join } from 'path';
 
 async function bootstrap() {
   const logger = new Logger('WaslShipBootstrap');
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    cors: {
-      origin: '*',
-      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-      credentials: true,
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Enable CORS with full support for web browsers, React Admin panels, and credentials
+  app.enableCors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, server-to-server) or any browser origin
+      callback(null, true);
     },
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Origin',
+      'X-Requested-With',
+      'Content-Type',
+      'Accept',
+      'Authorization',
+      'X-Access-Token',
+      'X-Api-Key',
+      'Access-Control-Allow-Headers',
+      'Access-Control-Allow-Origin',
+    ],
+    exposedHeaders: ['Content-Disposition', 'Content-Length', 'X-Total-Count'],
+    credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
 
   // Serve static files for uploads

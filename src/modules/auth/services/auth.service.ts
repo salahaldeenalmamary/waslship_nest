@@ -193,7 +193,7 @@ export class AuthService {
   }
 
   public sanitizeUser(user: User) {
-    const { passwordHash, otpCode, ...safeUser } = user;
+    const { passwordHash: _passwordHash, otpCode: _otpCode, ...safeUser } = user;
     return safeUser;
   }
 }

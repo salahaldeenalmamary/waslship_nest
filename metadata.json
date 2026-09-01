@@ -1,6 +1,6 @@
 {
-  "name": "WaslShip Modular Monolith API",
-  "description": "WaslShip Logistics, Shipment, Wallet & User Management Platform in NestJS with TypeORM and Swagger",
+  "name": "WaslShip NestJS API",
+  "description": "WaslShip modular logistics and shipping API platform with TypeORM, Swagger documentation, OTO carrier gateway integration, and financial reconciliation wallet.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

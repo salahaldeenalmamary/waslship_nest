@@ -8,7 +8,7 @@ import {
   IsPositive,
   IsString,
 } from 'class-validator';
-import { BankTransferStatus, TransactionType, WithdrawalStatus } from '../enums/wallet.enum';
+import { BankTransferStatus, WithdrawalStatus } from '../enums/wallet.enum';
 
 export class InitiateDepositDto {
   @ApiProperty({ example: 200.0 })

@@ -22,6 +22,8 @@ import {
   CreateShipmentDto,
   BulkCreateOrderDto,
   UpdateShipmentStatusDto,
+  CreateOtoShipmentDto,
+  SelectDeliveryOptionDto,
 } from '../dtos/shipment.dto';
 import { PaginationParamsDto } from '../../../common/dtos/pagination.dto';
 
@@ -33,7 +35,9 @@ export class ShipmentsController {
   constructor(private readonly shipmentsService: ShipmentsService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new shipment / order' })
+  @ApiOperation({
+    summary: 'Step 1: Create a new shipment / order (registers order with OTO)',
+  })
   async createShipment(
     @CurrentUser('id') merchantId: string,
     @Body() dto: CreateShipmentDto,
@@ -48,6 +52,27 @@ export class ShipmentsController {
     @Body() dto: BulkCreateOrderDto,
   ) {
     return this.shipmentsService.bulkCreateShipments(merchantId, dto);
+  }
+
+  @Get('oto/delivery-fee/:orderId')
+  @ApiOperation({
+    summary:
+      'Step 2: Get available delivery companies & deliveryOptionId options for an order from OTO',
+  })
+  async getOtoDeliveryFee(@Param('orderId') orderId: string) {
+    return this.shipmentsService.getDeliveryFeeForOrder(orderId);
+  }
+
+  @Post('oto/create-shipment')
+  @ApiOperation({
+    summary:
+      'Step 3: Complete shipment on OTO with orderId and selected deliveryOptionId',
+  })
+  async createOtoShipment(@Body() dto: CreateOtoShipmentDto) {
+    return this.shipmentsService.createOtoShipment(
+      dto.orderId,
+      dto.deliveryOptionId,
+    );
   }
 
   @Get()
@@ -75,6 +100,23 @@ export class ShipmentsController {
     @Param('id') shipmentId: string,
   ) {
     return this.shipmentsService.getShipmentDetails(shipmentId, merchantId);
+  }
+
+  @Post(':id/select-delivery-option')
+  @ApiOperation({
+    summary:
+      'Step 3 (By Shipment ID): Select deliveryOptionId and finalize booking with OTO carrier',
+  })
+  async selectDeliveryOption(
+    @CurrentUser('id') merchantId: string,
+    @Param('id') shipmentId: string,
+    @Body() dto: SelectDeliveryOptionDto,
+  ) {
+    return this.shipmentsService.selectDeliveryOptionForShipment(
+      shipmentId,
+      merchantId,
+      dto.deliveryOptionId,
+    );
   }
 
   @Put(':id/status')
