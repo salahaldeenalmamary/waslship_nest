@@ -22,33 +22,17 @@ import {
   CreateShipmentDto,
   BulkCreateOrderDto,
   UpdateShipmentStatusDto,
-  CreateOtoShipmentDto,
-  SelectDeliveryOptionDto,
-  PrepareOtoPayloadDto,
-} from '../dtos/shipment.dto';
+} from '../dtos';
 import { PaginationParamsDto } from '../../../common/dtos/pagination.dto';
 
 @ApiTags('Shipments (Merchant)')
 @ApiBearerAuth()
 @UseGuards(AuthGuard('jwt'))
-@Controller('api/shipments')
+@Controller('api')
 export class ShipmentsController {
   constructor(private readonly shipmentsService: ShipmentsService) {}
 
-  @Post('oto/prepare-payload')
-  @ApiOperation({
-    summary:
-      'Helper: Fetch and validate UserAddress details based on pickupAddressId and deliveryAddressId to prepare OTO createShipment payload',
-  })
-  async prepareOtoPayload(@Body() dto: PrepareOtoPayloadDto) {
-    return this.shipmentsService.prepareOtoCreateShipmentPayload(
-      dto.pickupAddressId,
-      dto.deliveryAddressId,
-      dto,
-    );
-  }
-
-  @Post()
+  @Post('shipments')
   @ApiOperation({
     summary: 'Step 1: Create a new shipment / order (registers order with OTO)',
   })
@@ -59,7 +43,7 @@ export class ShipmentsController {
     return this.shipmentsService.createShipment(merchantId, dto);
   }
 
-  @Post('bulk')
+  @Post('shipments/bulk')
   @ApiOperation({ summary: 'Bulk create multiple shipments' })
   async bulkCreate(
     @CurrentUser('id') merchantId: string,
@@ -68,28 +52,7 @@ export class ShipmentsController {
     return this.shipmentsService.bulkCreateShipments(merchantId, dto);
   }
 
-  @Get('oto/delivery-fee/:orderId')
-  @ApiOperation({
-    summary:
-      'Step 2: Get available delivery companies & deliveryOptionId options for an order from OTO',
-  })
-  async getOtoDeliveryFee(@Param('orderId') orderId: string) {
-    return this.shipmentsService.getDeliveryFeeForOrder(orderId);
-  }
-
-  @Post('oto/create-shipment')
-  @ApiOperation({
-    summary:
-      'Step 3: Complete shipment on OTO with orderId and selected deliveryOptionId',
-  })
-  async createOtoShipment(@Body() dto: CreateOtoShipmentDto) {
-    return this.shipmentsService.createOtoShipment(
-      dto.orderId,
-      dto.deliveryOptionId,
-    );
-  }
-
-  @Get()
+  @Get('shipments')
   @ApiOperation({ summary: 'Get merchant shipments with filters' })
   @ApiQuery({ name: 'status', enum: ShipmentStatus, required: false })
   @ApiQuery({ name: 'searchTerm', required: false })
@@ -107,7 +70,13 @@ export class ShipmentsController {
     );
   }
 
-  @Get(':id')
+  @Get('dashboard/overview')
+  @ApiOperation({ summary: 'Get merchant dashboard metrics' })
+  async getMerchantDashboard(@CurrentUser('id') merchantId: string) {
+    return this.shipmentsService.getDashboardOverview(merchantId);
+  }
+
+  @Get('shipments/:id')
   @ApiOperation({ summary: 'Get shipment details by ID' })
   async getShipmentDetails(
     @CurrentUser('id') merchantId: string,
@@ -116,24 +85,7 @@ export class ShipmentsController {
     return this.shipmentsService.getShipmentDetails(shipmentId, merchantId);
   }
 
-  @Post(':id/select-delivery-option')
-  @ApiOperation({
-    summary:
-      'Step 3 (By Shipment ID): Select deliveryOptionId and finalize booking with OTO carrier',
-  })
-  async selectDeliveryOption(
-    @CurrentUser('id') merchantId: string,
-    @Param('id') shipmentId: string,
-    @Body() dto: SelectDeliveryOptionDto,
-  ) {
-    return this.shipmentsService.selectDeliveryOptionForShipment(
-      shipmentId,
-      merchantId,
-      dto.deliveryOptionId,
-    );
-  }
-
-  @Put(':id/status')
+  @Put('shipments/:id/status')
   @ApiOperation({ summary: 'Update shipment status' })
   async updateStatus(
     @CurrentUser('id') merchantId: string,
@@ -147,7 +99,7 @@ export class ShipmentsController {
     );
   }
 
-  @Post(':id/hold')
+  @Post('shipments/:id/hold')
   @ApiOperation({ summary: 'Put shipment on hold' })
   async holdShipment(
     @CurrentUser('id') merchantId: string,
@@ -156,7 +108,7 @@ export class ShipmentsController {
     return this.shipmentsService.holdShipment(shipmentId, merchantId);
   }
 
-  @Post(':id/unhold')
+  @Post('shipments/:id/unhold')
   @ApiOperation({ summary: 'Unhold shipment and resume delivery' })
   async unholdShipment(
     @CurrentUser('id') merchantId: string,
@@ -165,7 +117,7 @@ export class ShipmentsController {
     return this.shipmentsService.unholdShipment(shipmentId, merchantId);
   }
 
-  @Post(':id/cancel')
+  @Post('shipments/:id/cancel')
   @ApiOperation({ summary: 'Cancel shipment' })
   async cancelShipment(
     @CurrentUser('id') merchantId: string,

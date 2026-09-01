@@ -5,13 +5,36 @@ import { OtoWebhookLog } from './entities/oto-webhook-log.entity';
 import { ShipmentAuditLog } from './entities/shipment-audit-log.entity';
 import { UserAddress } from '../users/entities/user-address.entity';
 import { User } from '../users/entities/user.entity';
-import { ShipmentsService } from './services/shipments.service';
-import { ShipmentAuditService } from './services/shipment-audit.service';
+
+// Services
+import {
+  ShipmentsService,
+  ShipmentAuditService,
+  ShipmentAddressService,
+  ShipmentCarrierService,
+  ShipmentAnalyticsService,
+  ShipmentTrackingService,
+  ShipmentWebhookService,
+  ShipmentAdminService,
+  OtoClient,
+} from './services';
+
+// Interceptors
 import { ShipmentAuditInterceptor } from './interceptors/shipment-audit.interceptor';
-import { ShipmentsController } from './endpoints/shipments.controller';
-import { TrackingController } from './endpoints/tracking.controller';
-import { AdminShipmentsController } from './endpoints/admin-shipments.controller';
-import { OtoClient } from './services/oto.client';
+
+// Controllers
+import {
+  ShipmentsController,
+  ShipmentCarrierController,
+  TrackingController,
+  AdminShipmentsController,
+  AdminCreationController,
+  AdminAnalyticsController,
+  AdminAuditController,
+  OtoWebhookController,
+} from './endpoints';
+
+// External Modules
 import { WalletModule } from '../wallet/wallet.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
@@ -29,18 +52,35 @@ import { NotificationsModule } from '../notifications/notifications.module';
   ],
   controllers: [
     ShipmentsController,
+    ShipmentCarrierController,
     TrackingController,
     AdminShipmentsController,
+    AdminCreationController,
+    AdminAnalyticsController,
+    AdminAuditController,
+    OtoWebhookController,
   ],
   providers: [
     ShipmentsService,
     ShipmentAuditService,
+    ShipmentAddressService,
+    ShipmentCarrierService,
+    ShipmentAnalyticsService,
+    ShipmentTrackingService,
+    ShipmentWebhookService,
+    ShipmentAdminService,
     ShipmentAuditInterceptor,
     OtoClient,
   ],
   exports: [
     ShipmentsService,
     ShipmentAuditService,
+    ShipmentAddressService,
+    ShipmentCarrierService,
+    ShipmentAnalyticsService,
+    ShipmentTrackingService,
+    ShipmentWebhookService,
+    ShipmentAdminService,
     ShipmentAuditInterceptor,
     OtoClient,
     TypeOrmModule,

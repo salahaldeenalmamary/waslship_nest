@@ -8,13 +8,11 @@ import {
   Query,
   UseGuards,
   UseInterceptors,
-  Headers,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiBearerAuth,
-  ApiHeader,
   ApiQuery,
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
@@ -29,133 +27,27 @@ import {
   UpdateCarrierDetailsDto,
   AdminCancelShipmentDto,
   BulkUpdateShipmentStatusDto,
-  AdminCreateShipmentDto,
-  SelectDeliveryOptionDto,
-} from '../dtos/shipment.dto';
-import { CreateUserAddressDto } from '../../users/dtos/user.dto';
+} from '../dtos';
 import { PaginationParamsDto } from '../../../common/dtos/pagination.dto';
 import { TrackShipmentAudit } from '../decorators/shipment-audit.decorator';
 import { ShipmentAuditInterceptor } from '../interceptors/shipment-audit.interceptor';
 
 @ApiTags('Admin Shipments & Operations')
-@Controller('api')
+@Controller('api/admin/shipments')
 @UseInterceptors(ShipmentAuditInterceptor)
 export class AdminShipmentsController {
   constructor(private readonly shipmentsService: ShipmentsService) {}
 
-  @Post('admin/shipments')
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.Admin, UserRole.SuperAdmin)
-  @TrackShipmentAudit({
-    action: 'ADMIN_INITIATE_SHIPMENT',
-    description: 'Admin initiated a new shipment creation for merchant',
-  })
-  @ApiOperation({
-    summary:
-      'Create a shipment for a selected merchant using sender and receiver addresses belonging to that merchant (Admin)',
-  })
-  async createShipmentAdmin(
-    @Body() dto: AdminCreateShipmentDto,
-    @CurrentUser() admin: User,
-  ) {
-    return this.shipmentsService.createShipmentForMerchantByAdmin(dto, admin);
-  }
-
-  @Get('admin/merchants/:merchantId/addresses')
+  @Get()
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.Admin, UserRole.SuperAdmin)
   @ApiOperation({
-    summary:
-      'Get all saved sender (pickup) and receiver (delivery) addresses for a selected merchant (Admin)',
+    summary: 'Get all platform shipments with merchant details and filters (Admin)',
   })
-  async getMerchantAddressesAdmin(@Param('merchantId') merchantId: string) {
-    return this.shipmentsService.getMerchantAddressesAdmin(merchantId);
-  }
-
-  @Post('admin/merchants/:merchantId/addresses')
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.Admin, UserRole.SuperAdmin)
-  @ApiOperation({
-    summary:
-      'Create a new sender (pickup) or receiver (delivery) address for a selected merchant (Admin)',
-  })
-  async createMerchantAddressAdmin(
-    @Param('merchantId') merchantId: string,
-    @Body() dto: CreateUserAddressDto,
-  ) {
-    return this.shipmentsService.createMerchantAddressAdmin(merchantId, dto);
-  }
-
-  @Get('admin/shipments/:id/delivery-options')
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.Admin, UserRole.SuperAdmin)
-  @ApiOperation({
-    summary:
-      'Step 2: Query available delivery companies & fee quotes for a shipment from OTO (Admin)',
-  })
-  async getDeliveryOptionsAdmin(@Param('id') shipmentId: string) {
-    return this.shipmentsService.getDeliveryOptionsForShipment(shipmentId);
-  }
-
-  @Post('admin/shipments/:id/select-delivery-option')
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.Admin, UserRole.SuperAdmin)
-  @TrackShipmentAudit({
-    action: 'ADMIN_SELECT_DELIVERY_OPTION',
-    description: 'Admin selected carrier delivery option and completed booking',
-  })
-  @ApiOperation({
-    summary:
-      'Step 3: Select delivery company option and complete booking on OTO (Admin)',
-  })
-  async selectDeliveryOptionAdmin(
-    @Param('id') shipmentId: string,
-    @Body() dto: SelectDeliveryOptionDto,
-    @CurrentUser() admin: User,
-  ) {
-    return this.shipmentsService.selectDeliveryOptionAdmin(
-      shipmentId,
-      dto.deliveryOptionId,
-      admin,
-    );
-  }
-
-  @Get('admin/shipments/:id/print-label')
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.Admin, UserRole.SuperAdmin)
-  @ApiOperation({
-    summary: 'Get printable Air Waybill / shipping label for a shipment (Admin)',
-  })
-  async printLabelAdmin(@Param('id') shipmentId: string) {
-    return this.shipmentsService.getShipmentLabel(shipmentId);
-  }
-
-  @Get('admin/shipments/:id/tracking')
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.Admin, UserRole.SuperAdmin)
-  @ApiOperation({
-    summary: 'Get live tracking details for a specific shipment (Admin)',
-  })
-  async getTrackingAdmin(@Param('id') shipmentId: string) {
-    const shipment = await this.shipmentsService.getShipmentDetails(shipmentId);
-    return this.shipmentsService.trackShipment(shipment.trackingNumber);
-  }
-
-  @Get('admin/shipments')
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.Admin, UserRole.SuperAdmin)
-  @ApiOperation({ summary: 'Get all platform shipments with status & search filtering (Admin)' })
   @ApiQuery({ name: 'status', enum: ShipmentStatus, required: false })
   @ApiQuery({ name: 'searchTerm', required: false })
-  async getAllAdminShipments(
+  async getAllShipmentsAdmin(
     @Query() pagination: PaginationParamsDto,
     @Query('status') status?: ShipmentStatus,
     @Query('searchTerm') searchTerm?: string,
@@ -167,53 +59,7 @@ export class AdminShipmentsController {
     );
   }
 
-  @Get('admin/shipments/analytics')
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.Admin, UserRole.SuperAdmin)
-  @ApiOperation({ summary: 'Get detailed shipment analytics and financial breakdown (Admin)' })
-  async getShipmentAnalytics() {
-    return this.shipmentsService.getShipmentAnalyticsAdmin();
-  }
-
-  @Get('admin/shipments/audit-logs')
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.Admin, UserRole.SuperAdmin)
-  @ApiOperation({ summary: 'Get all platform administrative shipment audit logs (Admin)' })
-  @ApiQuery({ name: 'action', required: false })
-  @ApiQuery({ name: 'adminId', required: false })
-  @ApiQuery({ name: 'shipmentId', required: false })
-  async getAllAuditLogsAdmin(
-    @Query() pagination: PaginationParamsDto,
-    @Query('action') action?: string,
-    @Query('adminId') adminId?: string,
-    @Query('shipmentId') shipmentId?: string,
-  ) {
-    return this.shipmentsService.getAllAuditLogsAdmin(
-      pagination,
-      action,
-      adminId,
-      shipmentId,
-    );
-  }
-
-  @Get('admin/shipments/:id/audit-logs')
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.Admin, UserRole.SuperAdmin)
-  @ApiOperation({
-    summary:
-      'Get complete administrative audit history and timestamped state transitions for a shipment (Admin)',
-  })
-  async getShipmentAuditLogsAdmin(
-    @Param('id') shipmentId: string,
-    @Query() pagination: PaginationParamsDto,
-  ) {
-    return this.shipmentsService.getShipmentAuditLogs(shipmentId, pagination);
-  }
-
-  @Get('admin/shipments/:id')
+  @Get(':id')
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.Admin, UserRole.SuperAdmin)
@@ -222,7 +68,7 @@ export class AdminShipmentsController {
     return this.shipmentsService.getShipmentDetails(shipmentId);
   }
 
-  @Put('admin/shipments/:id/status')
+  @Put(':id/status')
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.Admin, UserRole.SuperAdmin)
@@ -245,7 +91,7 @@ export class AdminShipmentsController {
     );
   }
 
-  @Post('admin/shipments/:id/cancel')
+  @Post(':id/cancel')
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.Admin, UserRole.SuperAdmin)
@@ -271,7 +117,7 @@ export class AdminShipmentsController {
     );
   }
 
-  @Post('admin/shipments/:id/hold')
+  @Post(':id/hold')
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.Admin, UserRole.SuperAdmin)
@@ -287,7 +133,7 @@ export class AdminShipmentsController {
     return this.shipmentsService.holdShipment(shipmentId, undefined, admin);
   }
 
-  @Post('admin/shipments/:id/unhold')
+  @Post(':id/unhold')
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.Admin, UserRole.SuperAdmin)
@@ -303,7 +149,7 @@ export class AdminShipmentsController {
     return this.shipmentsService.unholdShipment(shipmentId, undefined, admin);
   }
 
-  @Put('admin/shipments/:id/carrier')
+  @Put(':id/carrier')
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.Admin, UserRole.SuperAdmin)
@@ -317,10 +163,14 @@ export class AdminShipmentsController {
     @Body() dto: UpdateCarrierDetailsDto,
     @CurrentUser() admin: User,
   ) {
-    return this.shipmentsService.updateCarrierDetailsAdmin(shipmentId, dto, admin);
+    return this.shipmentsService.updateCarrierDetailsAdmin(
+      shipmentId,
+      dto,
+      admin,
+    );
   }
 
-  @Post('admin/shipments/:id/sync-oto')
+  @Post(':id/sync-oto')
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.Admin, UserRole.SuperAdmin)
@@ -333,7 +183,7 @@ export class AdminShipmentsController {
     return this.shipmentsService.syncOtoOrderAdmin(shipmentId);
   }
 
-  @Post('admin/shipments/bulk-status')
+  @Post('bulk-status')
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.Admin, UserRole.SuperAdmin)
@@ -348,45 +198,4 @@ export class AdminShipmentsController {
   ) {
     return this.shipmentsService.bulkUpdateShipmentStatusAdmin(dto, admin);
   }
-
-  @Get('admin/dashboard')
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.Admin, UserRole.SuperAdmin)
-  @ApiOperation({ summary: 'Get platform-wide dashboard overview (Admin)' })
-  async getAdminDashboard() {
-    return this.shipmentsService.getDashboardOverview();
-  }
-
-  @Get('dashboard/overview')
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'))
-  @ApiOperation({ summary: 'Get merchant dashboard metrics' })
-  async getMerchantDashboard(@CurrentUser('id') merchantId: string) {
-    return this.shipmentsService.getDashboardOverview(merchantId);
-  }
-
-  @Post('webhooks/oto')
-  @ApiOperation({ summary: 'Handle OTO Carrier Status Webhook' })
-  @ApiHeader({ name: 'x-oto-signature', required: false })
-  async otoWebhook(
-    @Body() payload: any,
-    @Headers('x-oto-signature') signature: string = '',
-  ) {
-    return this.shipmentsService.handleOtoWebhook(
-      payload,
-      signature,
-      JSON.stringify(payload),
-    );
-  }
-
-  @Get('admin/webhooks/logs')
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.Admin, UserRole.SuperAdmin)
-  @ApiOperation({ summary: 'View OTO Webhook integration logs (Admin)' })
-  async getWebhookLogs(@Query() pagination: PaginationParamsDto) {
-    return this.shipmentsService.getWebhookLogs(pagination);
-  }
 }
-
