@@ -16,7 +16,10 @@ import {
   ShipmentTrackingService,
   ShipmentWebhookService,
   ShipmentAdminService,
+  ShipmentBatchImporterService,
   OtoClient,
+  OtoCarrierAdapter,
+  MultiCarrierRegistryService,
 } from './services';
 
 // Interceptors
@@ -51,8 +54,8 @@ import { NotificationsModule } from '../notifications/notifications.module';
     NotificationsModule,
   ],
   controllers: [
+    ShipmentCarrierController, // Must be before ShipmentsController to match static /api/shipments/* routes before :id
     ShipmentsController,
-    ShipmentCarrierController,
     TrackingController,
     AdminShipmentsController,
     AdminCreationController,
@@ -69,8 +72,11 @@ import { NotificationsModule } from '../notifications/notifications.module';
     ShipmentTrackingService,
     ShipmentWebhookService,
     ShipmentAdminService,
+    ShipmentBatchImporterService,
     ShipmentAuditInterceptor,
     OtoClient,
+    OtoCarrierAdapter,
+    MultiCarrierRegistryService,
   ],
   exports: [
     ShipmentsService,
@@ -81,8 +87,11 @@ import { NotificationsModule } from '../notifications/notifications.module';
     ShipmentTrackingService,
     ShipmentWebhookService,
     ShipmentAdminService,
+    ShipmentBatchImporterService,
     ShipmentAuditInterceptor,
     OtoClient,
+    OtoCarrierAdapter,
+    MultiCarrierRegistryService,
     TypeOrmModule,
   ],
 })

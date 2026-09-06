@@ -7,3 +7,7 @@ export * from './shipment-tracking.service';
 export * from './shipment-webhook.service';
 export * from './shipment-admin.service';
 export * from './shipments.service';
+export * from './shipment-batch-importer.service';
+export * from './carriers/carrier-adapter.interface';
+export * from './carriers/oto.adapter';
+export * from './carriers/multi-carrier-registry.service';
