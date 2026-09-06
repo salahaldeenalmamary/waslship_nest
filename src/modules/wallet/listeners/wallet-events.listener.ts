@@ -43,7 +43,25 @@ export class WalletEventsListener {
         );
       }
 
-      // 2. Release reservation if shipment was cancelled
+      // 2. Finalize shipping fee deduction for delivered non-COD (prepaid) shipments
+      if (
+        event.newStatus === ShipmentStatus.Delivered &&
+        event.oldStatus !== ShipmentStatus.Delivered &&
+        event.paymentMethod !== PaymentMethod.COD &&
+        event.shippingCost > 0
+      ) {
+        this.logger.log(
+          `[WalletEventsListener] Finalizing shipping fee deduction for delivered prepaid shipment #${event.trackingNumber}, cost: ${event.shippingCost} SAR`,
+        );
+        await this.walletService.finalizeShipmentDeduction(
+          event.merchantId,
+          event.shipmentId,
+          event.shippingCost,
+          event.trackingNumber,
+        );
+      }
+
+      // 3. Release reservation if shipment was cancelled
       if (
         event.newStatus === ShipmentStatus.Cancelled &&
         event.oldStatus !== ShipmentStatus.Cancelled

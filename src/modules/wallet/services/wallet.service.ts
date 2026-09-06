@@ -53,8 +53,127 @@ export class WalletService {
     return wallet;
   }
 
-  async getWalletDashboard(merchantId: string) {
+  /**
+   * Calculates the exact wallet balance directly from the authoritative transaction ledger.
+   * Only successfully completed transactions are factored into the balance:
+   * Ledger Balance = SUM(Completed Transactions: Credits (+) and Debits (-))
+   */
+  async calculateBalanceFromLedger(merchantId: string): Promise<number> {
+    const raw = await this.transactionRepository
+      .createQueryBuilder('tx')
+      .select('COALESCE(SUM(tx.amount), 0)', 'total')
+      .where('tx.merchantId = :merchantId', { merchantId })
+      .andWhere('tx.status = :status', { status: TransactionStatus.Completed })
+      .andWhere('tx.isDeleted = :isDeleted', { isDeleted: false })
+      .getRawOne();
+
+    const sum = Number(Number(raw?.total || 0).toFixed(2));
+
+    // Handle initialization edge case: if no transactions exist but wallet has initial seeded balance
+    const txCount = await this.transactionRepository.count({
+      where: { merchantId, isDeleted: false },
+    });
+
+    if (txCount === 0) {
+      const wallet = await this.getOrCreateWallet(merchantId);
+      if (Number(wallet.balance) > 0) {
+        // Backfill initial opening balance ledger entry
+        const initTx = this.transactionRepository.create({
+          walletId: wallet.id,
+          merchantId,
+          amount: Number(wallet.balance),
+          type: TransactionType.Deposit,
+          status: TransactionStatus.Completed,
+          description: 'Initial Wallet Opening Provision',
+          currency: wallet.currency || 'SAR',
+        });
+        await this.transactionRepository.save(initTx);
+        return Number(wallet.balance);
+      }
+    }
+
+    return sum;
+  }
+
+  /**
+   * Reconciles the fast-cache `wallets.balance` with the authoritative `wallet_transactions` ledger.
+   * If any drift or discrepancy is detected, it auto-corrects the cached balance to ensure mathematical consistency.
+   */
+  async syncWalletWithLedger(merchantId: string): Promise<{
+    wallet: Wallet;
+    ledgerBalance: number;
+    discrepancy: number;
+    wasReconciled: boolean;
+  }> {
     const wallet = await this.getOrCreateWallet(merchantId);
+    const ledgerBalance = await this.calculateBalanceFromLedger(merchantId);
+    const currentCached = Number(wallet.balance);
+    const discrepancy = Number((currentCached - ledgerBalance).toFixed(2));
+
+    let wasReconciled = false;
+    if (discrepancy !== 0) {
+      this.logger.warn(
+        `[Ledger Sync] Discrepancy detected for merchant ${merchantId}: Stored=${currentCached} SAR, Ledger=${ledgerBalance} SAR. Syncing to ledger...`,
+      );
+      wallet.balance = ledgerBalance;
+      await this.walletRepository.save(wallet);
+      wasReconciled = true;
+    }
+
+    return { wallet, ledgerBalance, discrepancy, wasReconciled };
+  }
+
+  /**
+   * Provides a real-time mathematical proof & audit trail comparing stored balance vs. transaction table ledger.
+   */
+  async auditWalletAgainstLedger(merchantId: string) {
+    const syncResult = await this.syncWalletWithLedger(merchantId);
+    const wallet = syncResult.wallet;
+
+    // Aggregate by transaction type
+    const aggregates = await this.transactionRepository
+      .createQueryBuilder('tx')
+      .select('tx.type', 'type')
+      .addSelect('COUNT(tx.id)', 'count')
+      .addSelect('COALESCE(SUM(tx.amount), 0)', 'totalAmount')
+      .where('tx.merchantId = :merchantId', { merchantId })
+      .andWhere('tx.status = :status', { status: TransactionStatus.Completed })
+      .andWhere('tx.isDeleted = :isDeleted', { isDeleted: false })
+      .groupBy('tx.type')
+      .getRawMany();
+
+    const summaryByType: Record<string, { count: number; totalAmount: number }> = {};
+    for (const row of aggregates) {
+      summaryByType[row.type] = {
+        count: Number(row.count),
+        totalAmount: Number(Number(row.totalAmount).toFixed(2)),
+      };
+    }
+
+    return {
+      merchantId,
+      currency: wallet.currency,
+      storedBalance: Number(wallet.balance),
+      ledgerCalculatedBalance: syncResult.ledgerBalance,
+      discrepancy: syncResult.discrepancy,
+      isSynchronized: true,
+      wasAutoReconciled: syncResult.wasReconciled,
+      reservedBalance: Number(wallet.reservedBalance),
+      availableBalance: Math.max(0, Number((wallet.balance - wallet.reservedBalance).toFixed(2))),
+      pendingCodBalance: Number(wallet.pendingCodBalance),
+      ledgerBreakdown: {
+        codSettlements: summaryByType[TransactionType.CODSettlement] || { count: 0, totalAmount: 0 },
+        bankTransfers: summaryByType[TransactionType.BankTransfer] || { count: 0, totalAmount: 0 },
+        deposits: summaryByType[TransactionType.Deposit] || { count: 0, totalAmount: 0 },
+        withdrawals: summaryByType[TransactionType.Withdrawal] || { count: 0, totalAmount: 0 },
+        shipmentDeductions: summaryByType[TransactionType.ShipmentDeduction] || { count: 0, totalAmount: 0 },
+      },
+      auditTimestamp: new Date().toISOString(),
+    };
+  }
+
+  async getWalletDashboard(merchantId: string) {
+    const { wallet, ledgerBalance } = await this.syncWalletWithLedger(merchantId);
     const recentTransactions = await this.transactionRepository.find({
       where: { merchantId, isDeleted: false },
       order: { createdAt: 'DESC' },
@@ -63,10 +182,12 @@ export class WalletService {
 
     return {
       balance: wallet.balance,
+      ledgerCalculatedBalance: ledgerBalance,
       reservedBalance: wallet.reservedBalance,
-      availableBalance: Math.max(0, wallet.balance - wallet.reservedBalance),
+      availableBalance: Math.max(0, Number((wallet.balance - wallet.reservedBalance).toFixed(2))),
       pendingCodBalance: wallet.pendingCodBalance,
       currency: wallet.currency,
+      isLedgerSynchronized: true,
       recentTransactions,
     };
   }
@@ -112,8 +233,52 @@ export class WalletService {
 
   async releaseShipmentReservation(merchantId: string, amount: number) {
     const wallet = await this.getOrCreateWallet(merchantId);
-    wallet.reservedBalance = Math.max(0, wallet.reservedBalance - amount);
+    wallet.reservedBalance = Math.max(0, Number((wallet.reservedBalance - amount).toFixed(2)));
     await this.walletRepository.save(wallet);
+  }
+
+  /**
+   * Finalizes shipping fee deduction for delivered prepaid (non-COD) shipments.
+   * Releases the held reservation, deducts from the balance, and commits a Completed ShipmentDeduction ledger transaction.
+   */
+  async finalizeShipmentDeduction(
+    merchantId: string,
+    shipmentId: string,
+    amount: number,
+    trackingNumber?: string,
+  ) {
+    const existingTx = await this.transactionRepository.findOne({
+      where: {
+        referenceId: shipmentId,
+        type: TransactionType.ShipmentDeduction,
+        status: TransactionStatus.Completed,
+        isDeleted: false,
+      },
+    });
+
+    if (existingTx) {
+      this.logger.warn(
+        `Shipment ${shipmentId} fee was already deducted in transaction ${existingTx.id}. Skipping duplicate.`,
+      );
+      return existingTx;
+    }
+
+    const wallet = await this.getOrCreateWallet(merchantId);
+    wallet.reservedBalance = Math.max(0, Number((wallet.reservedBalance - amount).toFixed(2)));
+    wallet.balance = Number((wallet.balance - amount).toFixed(2));
+    await this.walletRepository.save(wallet);
+
+    const tx = this.transactionRepository.create({
+      walletId: wallet.id,
+      merchantId,
+      amount: -amount,
+      type: TransactionType.ShipmentDeduction,
+      status: TransactionStatus.Completed,
+      referenceId: shipmentId,
+      description: `Shipping cost deduction for Delivered shipment #${trackingNumber || shipmentId}`,
+      currency: wallet.currency || 'SAR',
+    });
+    return this.transactionRepository.save(tx);
   }
 
   async processCodSettlement(

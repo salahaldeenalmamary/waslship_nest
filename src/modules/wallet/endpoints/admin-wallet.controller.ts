@@ -29,6 +29,7 @@ import { Request, Response } from 'express';
 import { BankTransferPaymentService } from '../services/bank-transfer-payment.service';
 import { WithdrawalRequestService } from '../services/withdrawal-request.service';
 import { FinancialStatementService } from '../services/financial-statement.service';
+import { WalletService } from '../services/wallet.service';
 import { StorageService } from '../../storage/services/storage.service';
 import { CurrentUser } from '../../auth/current-user.decorator';
 import { Roles, RolesGuard } from '../../auth/roles.guard';
@@ -48,8 +49,18 @@ export class AdminWalletController {
     private readonly bankTransferPaymentService: BankTransferPaymentService,
     private readonly withdrawalRequestService: WithdrawalRequestService,
     private readonly financialStatementService: FinancialStatementService,
+    private readonly walletService: WalletService,
     private readonly storageService: StorageService,
   ) {}
+
+  @Get('balance-audit/:merchantId')
+  @ApiOperation({
+    summary:
+      'Ledger Audit: Verify any merchant stored wallet balance against the sum of completed ledger transactions (Admin)',
+  })
+  async auditMerchantWalletBalance(@Param('merchantId') merchantId: string) {
+    return this.walletService.auditWalletAgainstLedger(merchantId);
+  }
 
   @Get('bank-transfers')
   @ApiOperation({ summary: 'List all pending/reviewed bank transfers (Admin)' })

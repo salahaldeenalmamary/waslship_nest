@@ -59,6 +59,15 @@ export class WalletController {
     return this.walletService.getWalletDashboard(merchantId);
   }
 
+  @Get('balance-audit')
+  @ApiOperation({
+    summary:
+      'Ledger Audit: Verify stored wallet balance against the sum of completed ledger transactions',
+  })
+  async auditWalletBalance(@CurrentUser('id') merchantId: string) {
+    return this.walletService.auditWalletAgainstLedger(merchantId);
+  }
+
   @Get('transactions')
   @ApiOperation({ summary: 'Get merchant transaction ledger' })
   @ApiQuery({ name: 'type', enum: TransactionType, required: false })
