@@ -27,3 +27,9 @@ export enum WithdrawalStatus {
   Approved = 'Approved',
   Rejected = 'Rejected',
 }
+
+export enum CodReconciliationStatus {
+  Completed = 'Completed',
+  CompletedWithDiscrepancies = 'CompletedWithDiscrepancies',
+  Failed = 'Failed',
+}

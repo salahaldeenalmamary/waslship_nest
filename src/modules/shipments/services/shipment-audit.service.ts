@@ -165,7 +165,7 @@ export class ShipmentAuditService {
     const query = this.auditRepository.createQueryBuilder('log');
 
     if (action) {
-      query.andWhere('log.action ILIKE :action', { action: `%${action}%` });
+      query.andWhere('LOWER(log.action) LIKE LOWER(:action)', { action: `%${action}%` });
     }
     if (adminId) {
       query.andWhere('log.adminId = :adminId', { adminId });

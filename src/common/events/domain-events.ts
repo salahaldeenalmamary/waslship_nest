@@ -6,9 +6,11 @@ export enum DomainEventNames {
   SHIPMENT_STATUS_CHANGED = 'shipment.status_changed',
   SHIPMENT_DELIVERED = 'shipment.delivered',
   SHIPMENT_CANCELLED = 'shipment.cancelled',
+  OTO_DELIVERY_WEBHOOK_RECEIVED = 'oto.delivery_webhook_received',
 
   WALLET_CREDITED = 'wallet.credited',
   WALLET_DEBITED = 'wallet.debited',
+  COD_SETTLED = 'wallet.cod_settled',
   WALLET_RESERVATION_CREATED = 'wallet.reservation_created',
   WALLET_RESERVATION_RELEASED = 'wallet.reservation_released',
   BANK_TRANSFER_CREATED = 'wallet.bank_transfer_created',
@@ -134,3 +136,40 @@ export class WithdrawalReviewedEvent {
     public readonly reviewedByAdminId?: string,
   ) {}
 }
+
+/**
+ * Dispatched when an OTO delivery or cash collection webhook is received and verified.
+ */
+export class OtoDeliveryWebhookReceivedEvent {
+  constructor(
+    public readonly trackingNumber: string,
+    public readonly otoOrderId?: string,
+    public readonly status: string = 'delivered',
+    public readonly isDelivered: boolean = true,
+    public readonly isCashCollected: boolean = true,
+    public readonly collectedAmount?: number,
+    public readonly carrierName?: string,
+    public readonly carrierReceiptReference?: string,
+    public readonly deliveryDate?: Date,
+    public readonly rawPayload?: any,
+  ) {}
+}
+
+/**
+ * Dispatched when a cash-on-delivery (COD) shipment is successfully settled into a merchant wallet.
+ */
+export class CodSettledEvent {
+  constructor(
+    public readonly shipmentId: string,
+    public readonly merchantId: string,
+    public readonly trackingNumber: string,
+    public readonly collectedAmount: number,
+    public readonly shippingCost: number,
+    public readonly netCredited: number,
+    public readonly newWalletBalance: number,
+    public readonly carrierName?: string,
+    public readonly referenceId?: string,
+    public readonly source: string = 'OTO_WEBHOOK',
+  ) {}
+}
+

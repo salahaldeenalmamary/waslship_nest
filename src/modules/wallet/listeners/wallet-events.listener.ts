@@ -6,12 +6,16 @@ import {
 } from '../../../common/events/domain-events';
 import { ShipmentStatus, PaymentMethod } from '../../shipments/enums/shipment.enum';
 import { WalletService } from '../services/wallet.service';
+import { AutomatedCodSettlementPipelineService } from '../services/automated-cod-settlement-pipeline.service';
 
 @Injectable()
 export class WalletEventsListener {
   private readonly logger = new Logger(WalletEventsListener.name);
 
-  constructor(private readonly walletService: WalletService) {}
+  constructor(
+    private readonly walletService: WalletService,
+    private readonly automatedCodPipeline: AutomatedCodSettlementPipelineService,
+  ) {}
 
   @OnEvent(DomainEventNames.SHIPMENT_STATUS_CHANGED, { async: true })
   async handleShipmentStatusChanged(event: ShipmentStatusChangedEvent) {
@@ -20,7 +24,7 @@ export class WalletEventsListener {
     );
 
     try {
-      // 1. Process COD settlement upon delivery
+      // 1. Process COD settlement upon delivery via Automated COD Settlement Pipeline
       if (
         event.newStatus === ShipmentStatus.Delivered &&
         event.oldStatus !== ShipmentStatus.Delivered &&
@@ -28,13 +32,14 @@ export class WalletEventsListener {
         event.codAmount > 0
       ) {
         this.logger.log(
-          `Processing COD settlement for shipment #${event.trackingNumber}, COD: ${event.codAmount} SAR`,
+          `[WalletEventsListener] Triggering Automated COD Settlement Pipeline for delivered shipment #${event.trackingNumber}, COD: ${event.codAmount} SAR`,
         );
-        await this.walletService.processCodSettlement(
-          event.merchantId,
-          event.shipmentId,
-          event.codAmount,
-          event.shippingCost,
+        await this.automatedCodPipeline.processSettlementByTrackingNumber(
+          event.trackingNumber,
+          {
+            collectedAmount: event.codAmount,
+            carrierName: event.carrierName,
+          },
         );
       }
 

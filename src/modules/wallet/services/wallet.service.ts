@@ -122,13 +122,31 @@ export class WalletService {
     codAmount: number,
     shippingCost: number,
   ) {
+    const existingTx = await this.transactionRepository.findOne({
+      where: {
+        referenceId: shipmentId,
+        type: TransactionType.CODSettlement,
+        status: TransactionStatus.Completed,
+        isDeleted: false,
+      },
+    });
+
+    if (existingTx) {
+      this.logger.warn(
+        `Shipment ${shipmentId} COD was already settled in transaction ${existingTx.id}. Skipping duplicate credit.`,
+      );
+      return existingTx;
+    }
+
     const wallet = await this.getOrCreateWallet(merchantId);
-    const netCredit = codAmount - shippingCost;
+    const netCredit = Math.max(0, codAmount - shippingCost);
 
     // Credit net COD to balance
-    wallet.balance += netCredit;
+    wallet.balance = Number((wallet.balance + netCredit).toFixed(2));
     // Release any shipping cost reserve if held
-    wallet.reservedBalance = Math.max(0, wallet.reservedBalance - shippingCost);
+    wallet.reservedBalance = Math.max(0, Number((wallet.reservedBalance - shippingCost).toFixed(2)));
+    // Deduct from pending COD balance
+    wallet.pendingCodBalance = Math.max(0, Number((wallet.pendingCodBalance - codAmount).toFixed(2)));
     await this.walletRepository.save(wallet);
 
     const description = `COD Settlement for Shipment (Collected: ${codAmount} SAR, Deducted Shipping: ${shippingCost} SAR)`;

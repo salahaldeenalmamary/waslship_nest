@@ -7,6 +7,7 @@ import {
   Query,
   Body,
   Req,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -20,18 +21,21 @@ import {
   ApiQuery,
   ApiConsumes,
   ApiBody,
+  ApiProduces,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { BankTransferPaymentService } from '../services/bank-transfer-payment.service';
 import { WithdrawalRequestService } from '../services/withdrawal-request.service';
+import { FinancialStatementService } from '../services/financial-statement.service';
 import { StorageService } from '../../storage/services/storage.service';
 import { CurrentUser } from '../../auth/current-user.decorator';
 import { Roles, RolesGuard } from '../../auth/roles.guard';
 import { UserRole } from '../../users/enums/user.enum';
 import { BankTransferStatus, WithdrawalStatus } from '../enums/wallet.enum';
 import { ReviewBankTransferDto, ReviewWithdrawalRequestDto } from '../dtos/wallet.dto';
+import { MonthlyStatementQueryDto } from '../dtos/financial-statement.dto';
 import { PaginationParamsDto } from '../../../common/dtos/pagination.dto';
 
 @ApiTags('Admin Bank Transfers & Financials')
@@ -43,6 +47,7 @@ export class AdminWalletController {
   constructor(
     private readonly bankTransferPaymentService: BankTransferPaymentService,
     private readonly withdrawalRequestService: WithdrawalRequestService,
+    private readonly financialStatementService: FinancialStatementService,
     private readonly storageService: StorageService,
   ) {}
 
@@ -142,5 +147,83 @@ export class AdminWalletController {
       withdrawal: result,
       attachment,
     };
+  }
+
+  // ==========================================
+  // ADMIN MERCHANT MONTHLY FINANCIAL STATEMENTS
+  // ==========================================
+
+  @Get('statements/merchant/:merchantId')
+  @ApiOperation({
+    summary:
+      'Get monthly financial statement, shipping fees & ZATCA tax report for any merchant (Admin)',
+  })
+  async getMerchantMonthlyStatement(
+    @Param('merchantId') merchantId: string,
+    @Query() query: MonthlyStatementQueryDto,
+  ) {
+    return this.financialStatementService.getMonthlyStatementData(
+      merchantId,
+      query.month,
+    );
+  }
+
+  @Get('statements/merchant/:merchantId/csv')
+  @ApiOperation({
+    summary:
+      'Download monthly financial statement CSV for any merchant (Admin)',
+  })
+  @ApiProduces('text/csv')
+  async exportMerchantMonthlyStatementCsv(
+    @Param('merchantId') merchantId: string,
+    @Query() query: MonthlyStatementQueryDto,
+    @Res() res: Response,
+  ) {
+    const result =
+      await this.financialStatementService.generateMonthlyStatementCsv(
+        merchantId,
+        query.month,
+      );
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${result.filename}"`,
+    );
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
+    return res.status(200).send(`\uFEFF${result.csvContent}`);
+  }
+
+  @Get('statements/merchant/:merchantId/pdf')
+  @ApiOperation({
+    summary:
+      'Download monthly financial statement PDF for any merchant (Admin)',
+  })
+  @ApiProduces('application/pdf')
+  async exportMerchantMonthlyStatementPdf(
+    @Param('merchantId') merchantId: string,
+    @Query() query: MonthlyStatementQueryDto,
+    @Res() res: Response,
+  ) {
+    const result =
+      await this.financialStatementService.generateMonthlyStatementPdf(
+        merchantId,
+        query.month,
+      );
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${result.filename}"`,
+    );
+    res.setHeader('Content-Length', result.pdfBuffer.length);
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
+    return res.status(200).end(result.pdfBuffer);
   }
 }

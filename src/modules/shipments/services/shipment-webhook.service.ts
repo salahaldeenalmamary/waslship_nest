@@ -8,13 +8,14 @@ import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Shipment } from '../entities/shipment.entity';
 import { OtoWebhookLog } from '../entities/oto-webhook-log.entity';
-import { ShipmentStatus, PaymentMethod } from '../enums/shipment.enum';
+import { ShipmentStatus } from '../enums/shipment.enum';
 import { OtoClient } from './oto.client';
 import { ShipmentAuditService } from './shipment-audit.service';
 import { PaginationParamsDto, PagedResult } from '../../../common/dtos/pagination.dto';
 import {
   DomainEventNames,
   ShipmentStatusChangedEvent,
+  OtoDeliveryWebhookReceivedEvent,
 } from '../../../common/events/domain-events';
 
 @Injectable()
@@ -51,33 +52,98 @@ export class ShipmentWebhookService {
     }
 
     try {
-      const otoStatus = (payload.status || '').toLowerCase();
+      // Support both flat and nested OTO webhook payloads
+      const data = payload.data || payload.order || payload.shipment || payload;
+      const trackingNumber =
+        data.trackingNumber ||
+        data.tracking_number ||
+        payload.trackingNumber ||
+        payload.tracking_number;
+      const otoOrderId =
+        data.otoId ||
+        data.oto_id ||
+        data.orderId ||
+        data.order_id ||
+        payload.otoId ||
+        payload.orderId;
+
+      const otoStatus = (
+        data.status ||
+        data.event ||
+        payload.status ||
+        payload.event ||
+        ''
+      ).toLowerCase();
+
       let newStatus: ShipmentStatus | null = null;
 
-      if (otoStatus.includes('delivered')) newStatus = ShipmentStatus.Delivered;
-      else if (otoStatus.includes('transit')) newStatus = ShipmentStatus.InTransit;
-      else if (otoStatus.includes('pickup')) newStatus = ShipmentStatus.PickedUp;
-      else if (otoStatus.includes('cancel')) newStatus = ShipmentStatus.Cancelled;
-      else if (otoStatus.includes('return')) newStatus = ShipmentStatus.Returned;
+      if (
+        otoStatus.includes('delivered') ||
+        otoStatus.includes('cash_collected') ||
+        otoStatus.includes('cod_collected') ||
+        otoStatus.includes('payment_collected') ||
+        otoStatus.includes('completed') ||
+        otoStatus.includes('paid')
+      ) {
+        newStatus = ShipmentStatus.Delivered;
+      } else if (otoStatus.includes('transit')) {
+        newStatus = ShipmentStatus.InTransit;
+      } else if (otoStatus.includes('pickup')) {
+        newStatus = ShipmentStatus.PickedUp;
+      } else if (otoStatus.includes('cancel')) {
+        newStatus = ShipmentStatus.Cancelled;
+      } else if (otoStatus.includes('return')) {
+        newStatus = ShipmentStatus.Returned;
+      }
 
-      if (newStatus && (payload.trackingNumber || payload.orderId)) {
+      if (newStatus && (trackingNumber || otoOrderId)) {
         const shipment = await this.shipmentRepository.findOne({
           where: [
-            { trackingNumber: payload.trackingNumber },
-            { otoOrderId: payload.otoId || payload.orderId },
+            ...(trackingNumber ? [{ trackingNumber }] : []),
+            ...(otoOrderId ? [{ otoOrderId: String(otoOrderId) }] : []),
           ],
         });
 
         if (shipment) {
           const oldStatus = shipment.status;
           shipment.status = newStatus;
-          shipment.notes = `Updated via OTO Webhook [${payload.status}]`;
+          shipment.notes = `Updated via OTO Webhook [${payload.status || payload.event}]`;
 
           if (newStatus === ShipmentStatus.Delivered && oldStatus !== ShipmentStatus.Delivered) {
             shipment.deliveredAt = new Date();
-            if (shipment.paymentMethod === PaymentMethod.COD && shipment.codAmount > 0) {
-              shipment.isCodSettled = true;
-            }
+          }
+
+          const rawCollected =
+            data.collectedAmount ??
+            data.collected_amount ??
+            data.codCollected ??
+            data.cod_collected ??
+            data.amount_collected ??
+            data.amount ??
+            data.codAmount ??
+            payload.collectedAmount ??
+            payload.amount;
+
+          const collectedAmount =
+            rawCollected !== undefined && rawCollected !== null && !isNaN(Number(rawCollected))
+              ? Number(rawCollected)
+              : undefined;
+
+          const carrierName =
+            data.deliveryCompany ||
+            data.carrierName ||
+            data.carrier ||
+            payload.deliveryCompany ||
+            payload.carrierName;
+
+          const carrierReceiptReference =
+            data.receiptNumber ||
+            data.receiptReference ||
+            payload.receiptReference ||
+            payload.receiptNumber;
+
+          if (carrierName && !shipment.carrierName) {
+            shipment.carrierName = carrierName;
           }
 
           const updated = await this.shipmentRepository.save(shipment);
@@ -101,7 +167,7 @@ export class ShipmentWebhookService {
             );
           }
 
-          // Emit event
+          // Emit status changed event
           this.eventEmitter.emit(
             DomainEventNames.SHIPMENT_STATUS_CHANGED,
             new ShipmentStatusChangedEvent(
@@ -117,6 +183,25 @@ export class ShipmentWebhookService {
               updated.carrierName,
             ),
           );
+
+          // If delivered / cash collected, emit specific OTO delivery webhook event to trigger automated COD settlement pipeline
+          if (newStatus === ShipmentStatus.Delivered) {
+            this.eventEmitter.emit(
+              DomainEventNames.OTO_DELIVERY_WEBHOOK_RECEIVED,
+              new OtoDeliveryWebhookReceivedEvent(
+                updated.trackingNumber,
+                updated.otoOrderId,
+                otoStatus,
+                true,
+                true,
+                collectedAmount || updated.codAmount,
+                carrierName || updated.carrierName,
+                carrierReceiptReference,
+                updated.deliveredAt || new Date(),
+                payload,
+              ),
+            );
+          }
         }
       }
 
