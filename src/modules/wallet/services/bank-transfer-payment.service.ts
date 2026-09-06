@@ -11,6 +11,7 @@ import { BankTransferPayment } from '../entities/bank-transfer-payment.entity';
 import { BankAccount } from '../entities/bank-account.entity';
 import { Wallet } from '../entities/wallet.entity';
 import { WalletTransaction } from '../entities/transaction.entity';
+import { User } from '../../users/entities/user.entity';
 import {
   BankTransferStatus,
   TransactionStatus,
@@ -129,6 +130,12 @@ export class BankTransferPaymentService {
     const query = this.bankTransferRepository
       .createQueryBuilder('bt')
       .leftJoinAndSelect('bt.bankAccount', 'bankAccount')
+      .leftJoinAndMapOne(
+        'bt.merchant',
+        User,
+        'merchant',
+        'merchant.id = bt.merchantId',
+      )
       .where('bt.isDeleted = :isDeleted', { isDeleted: false });
 
     if (status) {

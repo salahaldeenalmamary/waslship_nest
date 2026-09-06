@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Shipment } from '../entities/shipment.entity';
+import { User } from '../../users/entities/user.entity';
 import { ShipmentStatus, PaymentMethod } from '../enums/shipment.enum';
 import {
   CreateShipmentDto,
@@ -203,13 +204,24 @@ export class ShipmentsService {
    * Get single shipment details
    */
   async getShipmentDetails(shipmentId: string, merchantId?: string) {
-    const query: any = { id: shipmentId, isDeleted: false };
-    if (merchantId) query.merchantId = merchantId;
+    const query = this.shipmentRepository
+      .createQueryBuilder('s')
+      .leftJoinAndSelect('s.pickupAddress', 'pickupAddress')
+      .leftJoinAndSelect('s.deliveryAddress', 'deliveryAddress')
+      .leftJoinAndMapOne(
+        's.merchant',
+        User,
+        'merchant',
+        'merchant.id = s.merchantId',
+      )
+      .where('s.id = :shipmentId', { shipmentId })
+      .andWhere('s.isDeleted = :isDeleted', { isDeleted: false });
 
-    const shipment = await this.shipmentRepository.findOne({
-      where: query,
-      relations: ['pickupAddress', 'deliveryAddress'],
-    });
+    if (merchantId) {
+      query.andWhere('s.merchantId = :merchantId', { merchantId });
+    }
+
+    const shipment = await query.getOne();
     if (!shipment) throw new NotFoundException('Shipment not found');
     return shipment;
   }

@@ -5,20 +5,13 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import * as net from 'net';
 
 // Entities
+import { ALL_ENTITIES } from './database/entities';
 import { User } from './modules/users/entities/user.entity';
 import { UserAddress } from './modules/users/entities/user-address.entity';
-import { UserBankAccount } from './modules/users/entities/user-bank-account.entity';
 import { Location } from './modules/users/entities/location.entity';
-import { Shipment } from './modules/shipments/entities/shipment.entity';
-import { OtoWebhookLog } from './modules/shipments/entities/oto-webhook-log.entity';
 import { Wallet } from './modules/wallet/entities/wallet.entity';
-import { WalletTransaction } from './modules/wallet/entities/transaction.entity';
-import { BankTransferPayment } from './modules/wallet/entities/bank-transfer-payment.entity';
 import { BankAccount } from './modules/wallet/entities/bank-account.entity';
-import { WithdrawalRequest } from './modules/wallet/entities/withdrawal-request.entity';
-import { NotificationEntity } from './modules/notifications/entities/notification.entity';
-import { DeviceToken } from './modules/notifications/entities/device-token.entity';
-import { MediaAttachment } from './modules/storage/entities/media-attachment.entity';
+import * as path from 'path';
 
 // Modules
 import { AuthModule } from './modules/auth/auth.module';
@@ -28,6 +21,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { HealthModule } from './modules/health/health.module';
 import { StorageModule } from './modules/storage/storage.module';
+import { DatabaseModule } from './database/database.module';
 import { DatabaseSeederService } from './common/services/seeder.service';
 
 const logger = new Logger('DatabaseConfig');
@@ -84,6 +78,8 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
         const dbPort = parseInt(config.get<string>('DB_PORT', '5432'), 10);
         const databaseUrl = config.get<string>('DATABASE_URL');
         const wantsPostgres = dbType === 'postgres' || Boolean(databaseUrl);
+        const migrations = [path.join(__dirname, 'database', 'migrations', '*{.ts,.js}')];
+        const migrationsRun = config.get<string>('DB_MIGRATIONS_RUN', 'false') === 'true';
 
         if (wantsPostgres) {
           let hostToCheck = dbHost;
@@ -108,22 +104,9 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
                 type: 'postgres',
                 url: databaseUrl,
                 autoLoadEntities: true,
-                entities: [
-                  User,
-                  UserAddress,
-                  UserBankAccount,
-                  Location,
-                  Shipment,
-                  OtoWebhookLog,
-                  Wallet,
-                  WalletTransaction,
-                  BankTransferPayment,
-                  BankAccount,
-                  WithdrawalRequest,
-                  NotificationEntity,
-                  DeviceToken,
-                  MediaAttachment,
-                ],
+                entities: ALL_ENTITIES,
+                migrations,
+                migrationsRun,
                 synchronize: config.get<string>('DB_SYNCHRONIZE', 'true') === 'true',
                 logging: config.get<string>('DB_LOGGING', 'false') === 'true',
                 ssl: config.get<string>('DB_SSL', 'false') === 'true' ? { rejectUnauthorized: false } : false,
@@ -138,22 +121,9 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
               password: config.get<string>('DB_PASSWORD', 'postgres123'),
               database: config.get<string>('DB_DATABASE', 'waslship_db'),
               autoLoadEntities: true,
-              entities: [
-                User,
-                UserAddress,
-                UserBankAccount,
-                Location,
-                Shipment,
-                OtoWebhookLog,
-                Wallet,
-                WalletTransaction,
-                BankTransferPayment,
-                BankAccount,
-                WithdrawalRequest,
-                NotificationEntity,
-                DeviceToken,
-                MediaAttachment,
-              ],
+              entities: ALL_ENTITIES,
+              migrations,
+              migrationsRun,
               synchronize: config.get<string>('DB_SYNCHRONIZE', 'true') === 'true',
               logging: config.get<string>('DB_LOGGING', 'false') === 'true',
               ssl: config.get<string>('DB_SSL', 'false') === 'true' ? { rejectUnauthorized: false } : false,
@@ -169,29 +139,17 @@ async function isDatabasePortOpen(host: string, port: number, timeoutMs = 800): 
           type: 'sqlite',
           database: config.get<string>('DB_DATABASE', 'waslship.db'),
           autoLoadEntities: true,
-          entities: [
-            User,
-            UserAddress,
-            UserBankAccount,
-            Location,
-            Shipment,
-            OtoWebhookLog,
-            Wallet,
-            WalletTransaction,
-            BankTransferPayment,
-            BankAccount,
-            WithdrawalRequest,
-            NotificationEntity,
-            DeviceToken,
-            MediaAttachment,
-          ],
-          synchronize: true,
-          logging: false,
+          entities: ALL_ENTITIES,
+          migrations,
+          migrationsRun,
+          synchronize: config.get<string>('DB_SYNCHRONIZE', 'true') === 'true',
+          logging: config.get<string>('DB_LOGGING', 'false') === 'true',
         };
       },
       inject: [ConfigService],
     }),
     TypeOrmModule.forFeature([User, Location, Wallet, UserAddress, BankAccount]),
+    DatabaseModule,
     AuthModule,
     UsersModule,
     ShipmentsModule,

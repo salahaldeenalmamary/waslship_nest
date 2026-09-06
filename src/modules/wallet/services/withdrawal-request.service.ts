@@ -11,6 +11,7 @@ import { WithdrawalRequest } from '../entities/withdrawal-request.entity';
 import { UserBankAccount } from '../../users/entities/user-bank-account.entity';
 import { Wallet } from '../entities/wallet.entity';
 import { WalletTransaction } from '../entities/transaction.entity';
+import { User } from '../../users/entities/user.entity';
 import {
   WithdrawalStatus,
   TransactionStatus,
@@ -119,6 +120,12 @@ export class WithdrawalRequestService {
     const query = this.withdrawalRepository
       .createQueryBuilder('wr')
       .leftJoinAndSelect('wr.userBankAccount', 'userBankAccount')
+      .leftJoinAndMapOne(
+        'wr.merchant',
+        User,
+        'merchant',
+        'merchant.id = wr.merchantId',
+      )
       .where('wr.isDeleted = :isDeleted', { isDeleted: false });
 
     if (status) {

@@ -56,6 +56,12 @@ export class ShipmentAdminService {
       .createQueryBuilder('s')
       .leftJoinAndSelect('s.pickupAddress', 'pickupAddress')
       .leftJoinAndSelect('s.deliveryAddress', 'deliveryAddress')
+      .leftJoinAndMapOne(
+        's.merchant',
+        User,
+        'merchant',
+        'merchant.id = s.merchantId',
+      )
       .where('s.isDeleted = :isDeleted', { isDeleted: false });
 
     if (status) {
@@ -64,7 +70,7 @@ export class ShipmentAdminService {
 
     if (searchTerm) {
       query.andWhere(
-        '(s.trackingNumber LIKE :term OR pickupAddress.contactName LIKE :term OR deliveryAddress.contactName LIKE :term OR deliveryAddress.contactPhone LIKE :term OR pickupAddress.city LIKE :term OR deliveryAddress.city LIKE :term)',
+        '(s.trackingNumber LIKE :term OR pickupAddress.contactName LIKE :term OR deliveryAddress.contactName LIKE :term OR deliveryAddress.contactPhone LIKE :term OR pickupAddress.city LIKE :term OR deliveryAddress.city LIKE :term OR merchant.fullName LIKE :term OR merchant.email LIKE :term OR merchant.companyName LIKE :term)',
         { term: `%${searchTerm}%` },
       );
     }
